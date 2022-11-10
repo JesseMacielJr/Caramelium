@@ -125,7 +125,10 @@ continue: CONTINUE NOME_BLOCO
 
 %%
 
+const char* token_name(int t) {
+    return yytname[YYTRANSLATE(t)];
+}
+
 void yyerror(const char *s) {
   printf("%s\n", s);
 }
-
