@@ -1,0 +1,21 @@
+// fibonacci
+a := 0;
+b := 1;
+n := $entrada: {
+    n := ler(“digite um número de interações:”);
+    n < 0 ? {
+        escrever(“o número não pode ser negativo”);
+        -> $entrada;
+    }
+    n
+};
+
+$laço: {
+    n -= 1;
+    n == 0 ? <- $laço;
+    escrever(“{}”, a);
+    next := a + b;
+    a = b;
+    b = next;
+    -> $laço;
+};

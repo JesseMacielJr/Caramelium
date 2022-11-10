@@ -1,0 +1,12 @@
+inicio
+    imprime(vou procurar o valor dois);
+    pl;
+    para(inteiro i=1:i<6:i=i+(1)){
+        imprime(i igual a + inteiro i);
+        pl;
+        se(i==2){
+            imprime(o valor dois foi encontrado);
+            pl;
+        };
+    };
+fim
