@@ -1,129 +1,95 @@
 #include "lex.yy.c"
 
+const char *token_name(int token) {
+  switch (token) {
+  case INICIO_BLOCO:
+    return "INICIO_BLOCO";
+  case FIM_BLOCO:
+    return "FIM_BLOCO";
+  case DECLARACAO:
+    return "DECLARACAO";
+  case ATRIBUICAO:
+    return "ATRIBUICAO";
+  case INTERROGACAO:
+    return "INTERROGACAO";
+  case DOIS_PONTOS:
+    return "DOIS_PONTOS";
+  case VIRGULA:
+    return "VIRGULA";
+  case IDENTIFICADOR:
+    return "IDENTIFICADOR";
+  case INTEIRO:
+    return "INTEIRO";
+  case FLOAT:
+    return "FLOAT";
+  case STRING:
+    return "STRING";
+  case NOME_BLOCO:
+    return "NOME_BLOCO";
+  case RETURN:
+    return "RETURN";
+  case CONTINUE:
+    return "CONTINUE";
+  case SETA_DUPLA:
+    return "SETA_DUPLA";
+  case SOMA:
+    return "SOMA";
+  case SUB:
+    return "SUB";
+  case MULT:
+    return "MULT";
+  case DIV:
+    return "DIV";
+  case MOD:
+    return "MOD";
+  case SOMA_ATRIBUICAO:
+    return "SOMA_ATRIBUICAO";
+  case SUB_ATRIBUICAO:
+    return "SUB_ATRIBUICAO";
+  case MULT_ATRIBUICAO:
+    return "MULT_ATRIBUICAO";
+  case DIV_ATRIBUICAO:
+    return "DIV_ATRIBUICAO";
+  case MOD_ATRIBUICAO:
+    return "MOD_ATRIBUICAO";
+  case AND:
+    return "AND";
+  case OR:
+    return "OR";
+  case NOT:
+    return "NOT";
+  case IGUAL:
+    return "IGUAL";
+  case NOT_IGUAL:
+    return "NOT_IGUAL";
+  case MENOR:
+    return "MENOR";
+  case MAIOR:
+    return "MAIOR";
+  case MENOR_IGUAL:
+    return "MENOR_IGUAL";
+  case MAIOR_IGUAL:
+    return "MAIOR_IGUAL";
+  case PONTOEVIRGULA:
+    return "PONTOEVIRGULA";
+  case ABRE_PARENTESES:
+    return "ABRE_PARENTESES";
+  case FECHA_PARENTESES:
+    return "FECHA_PARENTESES";
+  default:
+    return "ERRO";
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   int i = 0;
   while (1) {
-    int x = yylex();
-    if (x == 0)
+    int token = yylex();
+    if (token == 0)
       break;
 
-    switch (x) {
-    case INICIO_BLOCO:
-      printf("INICIO_BLOCO");
-      break;
-    case FIM_BLOCO:
-      printf("FIM_BLOCO");
-      break;
-    case DECLARACAO:
-      printf("DECLARACAO");
-      break;
-    case ATRIBUICAO:
-      printf("ATRIBUICAO");
-      break;
-    case INTERROGACAO:
-      printf("INTERROGACAO");
-      break;
-    case DOIS_PONTOS:
-      printf("DOIS_PONTOS");
-      break;
-    case VIRGULA:
-      printf("VIRGULA");
-      break;
-    case IDENTIFICADOR:
-      printf("IDENTIFICADOR");
-      break;
-    case INTEIRO:
-      printf("INTEIRO");
-      break;
-    case FLOAT:
-      printf("FLOAT");
-      break;
-    case STRING:
-      printf("STRING");
-      break;
-    case NOME_BLOCO:
-      printf("NOME_BLOCO");
-      break;
-    case RETURN:
-      printf("RETURN");
-      break;
-    case CONTINUE:
-      printf("CONTINUE");
-      break;
-    case SETA_DUPLA:
-      printf("SETA_DUPLA");
-      break;
-    case SOMA:
-      printf("SOMA");
-      break;
-    case SUB:
-      printf("SUB");
-      break;
-    case MULT:
-      printf("MULT");
-      break;
-    case DIV:
-      printf("DIV");
-      break;
-    case MOD:
-      printf("MOD");
-      break;
-    case SOMA_ATRIBUICAO:
-      printf("SOMA_ATRIBUICAO");
-      break;
-    case SUB_ATRIBUICAO:
-      printf("SUB_ATRIBUICAO");
-      break;
-    case MULT_ATRIBUICAO:
-      printf("MULT_ATRIBUICAO");
-      break;
-    case DIV_ATRIBUICAO:
-      printf("DIV_ATRIBUICAO");
-      break;
-    case MOD_ATRIBUICAO:
-      printf("MOD_ATRIBUICAO");
-      break;
-    case AND:
-      printf("AND");
-      break;
-    case OR:
-      printf("OR");
-      break;
-    case NOT:
-      printf("NOT");
-      break;
-    case IGUAL:
-      printf("IGUAL");
-      break;
-    case NOT_IGUAL:
-      printf("NOT_IGUAL");
-      break;
-    case MENOR:
-      printf("MENOR");
-      break;
-    case MAIOR:
-      printf("MAIOR");
-      break;
-    case MENOR_IGUAL:
-      printf("MENOR_IGUAL");
-      break;
-    case MAIOR_IGUAL:
-      printf("MAIOR_IGUAL");
-      break;
-    case PONTOEVIRGULA:
-      printf("PONTOEVIRGULA");
-      break;
-    case ABRE_PARENTESES:
-      printf("ABRE_PARENTESES");
-      break;
-    case FECHA_PARENTESES:
-      printf("FECHA_PARENTESES");
-      break;
-    default:
-      printf("ERRO");
-      break;
-    }
+    printf("%-16s %s", token_name(token), yytext);
     printf("\n");
   }
 
