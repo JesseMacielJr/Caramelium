@@ -3,8 +3,6 @@
   #include <stdio.h>
   #include <stdlib.h>
   #include <string.h>
-  #include <cstdio>
-  #include <iostream>
   using namespace std;
   extern "C" int yylex();
   #include "parser.tab.h"
