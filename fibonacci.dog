@@ -6,7 +6,7 @@ n := $entrada: {
     n < 0 ? {
         escrever("o número não pode ser negativo");
         -> $entrada;
-    }
+    };
     n
 };
 
