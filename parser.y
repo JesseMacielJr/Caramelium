@@ -1,25 +1,12 @@
 %{
 	#include <stdio.h>
-	#include <math.h> 
-	#include <stdlib.h>
-	#include <string.h>
-	#include <cstdio>
-	#include <iostream>
-	#include "no.h"
-
-	using namespace std;
 	#define YYERROR_VERBOSE
-	extern "C" int yylex();
-	extern "C" int yyparse();
-	extern "C" FILE *yyin;
+	int yylex();
+	int yyparse();
 	void yyerror(const char *s);
-
-
 %}
 
-%union{
-	No *pnt;
-}
+%union{}
 
 %token INICIO_BLOCO
 %token FIM_BLOCO
@@ -156,5 +143,5 @@ const char* token_name(int t) {
 }
 
 void yyerror(const char *s) {
-  printf("%s\n", s);
+    fprintf(stderr,"Error | Line: %d\n%s\n",yylineno,s);
 }

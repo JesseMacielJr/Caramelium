@@ -1,14 +1,12 @@
 %{
-  #include <math.h>
+
   #include <stdio.h>
-  #include <stdlib.h>
-  #include <string.h>
-  #include "no.h"
-  
-  extern "C" int yylex();
+
+  int yylex();
   #include "parser.tab.h"
 %}
 
+%option yylineno
 
 %%
 "{"   { return INICIO_BLOCO; }
