@@ -1,9 +1,13 @@
 %{
 
   #include <stdio.h>
+  #include "expr.h"
 
   int yylex();
+  extern Expr yylval;
   #include "parser.tab.h"
+
+  yytoken_kind_t literal(yytoken_kind_t token);
 %}
 
 %option yylineno
@@ -17,19 +21,17 @@
 ":"   { return DOIS_PONTOS; }
 ","   { return VIRGULA; }
 
-[-+]?[0-9]+ { 
-  return INTEIRO;
+[0-9]+ { 
+  return literal(INTEIRO);
 }
-[-+]?[0-9]+("."[0-9]*)([eE]"-"?[0-9]*)? { 
-  return FLOAT;
+[0-9]+("."[0-9]*)([eE]"-"?[0-9]*)? { 
+  return literal(FLOAT);
 }
-[a-zA-Z][a-zA-z0-9]* { 
-  return IDENTIFICADOR;
-}
+[a-zA-Z][a-zA-z0-9]* { return literal(IDENTIFICADOR); }
 
-\".*\" { return STRING; }
+\".*\" { return literal(STRING); }
 
-\$[a-zA-Zç][a-zA-z0-9ç]*   { return NOME_BLOCO; }
+\$[a-zA-Zç][a-zA-z0-9ç]*   { return literal(NOME_BLOCO); }
 
 "<-"  { return RETURN; }
 "->"  { return CONTINUE; }
@@ -61,6 +63,12 @@
 .       {return *yytext;}
 	
 %%	
+
+yytoken_kind_t literal(yytoken_kind_t token) {
+    yylval.text = strdup(yytext);
+    return token;
+}
+
 int yywrap(void){
   return 1; 
 } 
