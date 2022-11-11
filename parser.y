@@ -56,10 +56,11 @@
 
 %%
 
-programa
-    : expr PONTOEVIRGULA
-    | expr PONTOEVIRGULA programa
+programa: comandos
 
+comandos
+    : expr PONTOEVIRGULA
+    | comandos expr PONTOEVIRGULA
 
 expr: literal
     | IDENTIFICADOR
@@ -127,13 +128,10 @@ condicao
     | expr INTERROGACAO expr DOIS_PONTOS expr
 
 bloco
-    : INICIO_BLOCO exprsBloco FIM_BLOCO
-    | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO exprsBloco FIM_BLOCO
-
-exprsBloco
-    : expr
-    | expr PONTOEVIRGULA
-    | expr PONTOEVIRGULA exprsBloco
+    : INICIO_BLOCO comandos FIM_BLOCO
+    | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos FIM_BLOCO
+    | INICIO_BLOCO comandos expr FIM_BLOCO
+    | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos expr FIM_BLOCO
 
 return
     : RETURN
