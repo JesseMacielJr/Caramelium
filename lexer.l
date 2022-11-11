@@ -56,7 +56,7 @@
 ";"   { return PONTOEVIRGULA; }
 "("   { return ABRE_PARENTESES; }
 ")"   { return FECHA_PARENTESES; }
-[ \t\n]
+[ \f\n\r\t\v]
 "//".*
 .       {return *yytext;}
 	
