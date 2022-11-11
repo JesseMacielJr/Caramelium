@@ -46,6 +46,14 @@
 %token ABRE_PARENTESES
 %token FECHA_PARENTESES
 
+%right RETURN CONTINUE NOME_BLOCO
+%right DECLARACAO ATRIBUICAO SOMA_ATRIBUICAO SUB_ATRIBUICAO MULT_ATRIBUICAO DIV_ATRIBUICAO MOD_ATRIBUICAO
+%right INTERROGACAO DOIS_PONTOS
+%left IGUAL NOT_IGUAL MENOR MAIOR MENOR_IGUAL MAIOR_IGUAL
+%left NOT AND OR
+%left SOMA SUB
+%left MULT DIV MOD
+
 %%
 
 programa
@@ -60,7 +68,7 @@ expr: literal
     | opLogica
     | opRelacional
     | chamadaFuncao
-    | funcao
+    /* | funcao */
     | declaracao
     | opAtribuicao
     | condicao
@@ -98,12 +106,11 @@ exprsVirgula
     | expr VIRGULA
     | expr VIRGULA exprsVirgula
 
-funcao: ABRE_PARENTESES identificadoresVirgula FECHA_PARENTESES SETA_DUPLA expr
-
-identificadoresVirgula
-    : IDENTIFICADOR
-    | IDENTIFICADOR VIRGULA
-    | IDENTIFICADOR VIRGULA identificadoresVirgula
+/* funcao: ABRE_PARENTESES identificadoresVirgula FECHA_PARENTESES SETA_DUPLA expr */
+/* identificadoresVirgula */
+/*     : IDENTIFICADOR */
+/*     | IDENTIFICADOR VIRGULA */
+/*     | IDENTIFICADOR VIRGULA identificadoresVirgula */
 
 declaracao: IDENTIFICADOR DECLARACAO expr
 
