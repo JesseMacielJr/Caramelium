@@ -13,7 +13,7 @@ n := $entrada: {
 $laço: {
     n -= 1;
     n == 0 ? <- $laço;
-    escrever("{}", a);
+    escrever("%d", a);
     next := a + b;
     a = b;
     b = next;
