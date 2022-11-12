@@ -4,3 +4,4 @@ parser.tab.h
 *.exe
 printTokens
 compilador
+build

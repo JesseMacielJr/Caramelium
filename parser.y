@@ -6,43 +6,251 @@ int yylex();
 int yyparse();
 void yyerror(const char *s);
 
+
+unsigned int nextVar() {
+    static unsigned int varCounter = 0;
+    varCounter += 1;
+    return varCounter;
+}
+
 #include "expr.h"
 
 Expr yylval;
+
+char* concat(char* stra, char* strb) {
+    size_t lena = strlen(stra);
+    size_t lenb = strlen(strb);
+    void *buffer = malloc (lena + lenb + 1);
+    memcpy (buffer, stra, lena);
+    memcpy (buffer + lena, strb, lenb + 1);
+    return buffer;
+}
 
 void comando(Expr *out, Expr *tail, Expr *comando) {
     asprintf(&out->text, "%s%s;\n", tail->text ? tail->text : "", comando->text);
 }
 
 void uniop(const char* op, Expr *out, Expr *r) {
-    asprintf(&out->text, "(%s %s)", op, r->text);
+    if (r->var > 0) {
+        // int x<var>; 
+        // {
+        // <r>
+        // x<var> = <op> x<r.var>;
+        // }
+        int var = nextVar();
+        out->var = var;
+        asprintf(&out->text, "int x%d;\n{\n%s\nx%d=%sx%d;\n}",
+            var, r->text, var, op, r->var
+        );
+    } else {
+        // <op> <r>
+        asprintf(&out->text, "%s (%s)", op, r->text);
+    }
 }
 
 void binop(const char* op, Expr *out, Expr *l, Expr *r) {
-    asprintf(&out->text, "(%s %s %s)", l->text, op, r->text);
+    if (l->var > 0 && r->var > 0) {
+        // int x<var>; 
+        // {
+        // <l>
+        // <r>
+        // x<var> = x<l.var> <op> x<r.var>;
+        // }
+        int var = nextVar();
+        out->var = var;
+        asprintf(&out->text, "int x%d;\n{\n%s\n%s\nx%d=x%d%sx%d;\n}",
+            var, l->text, r->text, var, l->var, op, r->var
+        );
+    } else if (l->var > 0 && r->var == 0) {
+        // int x<var>; 
+        // {
+        // <l>
+        // x<var> = x<l.var> <op> <r>;
+        // }
+        int var = nextVar();
+        out->var = var;
+        asprintf(&out->text, "int x%d;\n{\n%s\nx%d=x%d%s%s;\n}",
+            var, l->text, var, l->var, op, r->text
+        );
+    } else if (l->var == 0 && r->var > 0) {
+        // int x<var>; 
+        // {
+        // <r>
+        // x<var> = <l> <op> x<r.var>;
+        // }
+        int var = nextVar();
+        out->var = var;
+        asprintf(&out->text, "int x%d;\n{\n%s\nx%d=%s%sx%d;\n}",
+            var, r->text, var, l->text, op, r->var
+        );
+    } else {
+        // <l> <op> <r>
+        asprintf(&out->text, "(%s) %s (%s)", l->text, op, r->text);
+    }
 }
 
-void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
-    asprintf(&out->text, "(%s ? %s : %s)", cond->text, then->text, otherwise->text);
-}
-
-void bloco(Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
-    asprintf(&out->text, "%s {\n%s%s\n}", nome->text, comandos->text, expr->text);
+void escrever_parametros(char **prelude, char **params, Expr* parametros) {
+    if (parametros->tail != NULL) {
+        escrever_parametros(prelude, params, parametros->tail);
+    }
+    if (parametros->var > 0) {
+        // int x<var>;
+        // {
+        // <parametros>
+        // x<var> = x<parametros.var>
+        // }
+        int var = nextVar();
+        char *out;
+        asprintf(&out, "int x%d;\n{\n%s\nx%d=x%d;\n}\n",
+            var, parametros->text, var, parametros->var
+        );
+        *prelude = concat(*prelude, out);
+        char *xvar;
+        asprintf(&xvar, ",x%d", var);
+        *params = concat(*params, xvar);
+    } else {
+        char *out;
+        asprintf(&out, ",%s", parametros->text);
+        *params = concat(*params, out);
+    }
 }
 
 void chamada_funcao(Expr *out, Expr *nome, Expr *parametros) {
-    asprintf(&out->text, "%s(%s)", nome->text, parametros->text);
+    char* prelude = "";
+    char* params = "";
+    escrever_parametros(&prelude, &params, parametros);
+    asprintf(&out->text, "%s%s(%s)", prelude, nome->text, params+1);
 }
 
 void parametro(Expr *out, Expr *tail, Expr *param) {
     if (tail->text) {
-        asprintf(&out->text, "%s, %s", tail->text, param->text);
+        out->tail = (Expr*) malloc(sizeof(Expr));
+        *out->tail = *tail;
+    }
+    out->var = param->var;
+    asprintf(&out->text, "%s", param->text);
+}
+
+void atribuicao(const char* op, Expr *out, Expr *id, Expr *r) {
+    int v = r->var;
+    if (v > 0) {
+        // <r>
+        // <id> <op> x<r.var>;
+        asprintf(&out->text, "%s\n%s %s x%d", r->text, id->text, op, r->var);
     } else {
-        asprintf(&out->text, "%s", param->text);
+        // %id <op> <r>;
+        asprintf(&out->text, "%s %s %s", id->text, op, r->text);
     }
 }
 
-Expr NONE = { 0 };
+void declaracao(Expr *out, Expr *id, Expr *r) {
+    int v = r->var;
+    // int <id>;
+    // <atr(<id>, <r>)>
+
+    Expr atr = { 0, 0 };
+    atribuicao("=", &atr, id, r);
+
+    asprintf(&out->text, "int %s;\n%s", id->text, atr.text);
+}
+
+void retorna(Expr *out, Expr *nome_bloco, Expr *expr) {
+    out->var = nextVar();
+    asprintf(&out->text, "int x%d; break;\n", out->var);
+}
+
+void continua(Expr *out, Expr *nome_bloco) {
+    asprintf(&out->text, "continue;\n");
+}
+
+void bloco(Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
+    // int x<var>;
+    // for(;;){
+    // <comands>
+    // <atr(x<var>, <expr>)>
+    // break;
+    // }
+    
+    unsigned int var = nextVar();
+    out->var = var;
+    char* label = nome->text ? nome->text : "";
+    char* comands = comandos->text ? comandos->text : "";
+    char* expression = expr->text ? expr->text : "0";
+
+    if (expr->text != NULL) {
+        Expr atr = { 0, 0 };
+        Expr xvar = { 0, var };
+        asprintf(&xvar.text, "x%d", var);
+        atribuicao("=", &atr, &xvar, expr);
+
+        asprintf(
+            &out->text,
+            "int x%d;\nfor(;;){\n%s%s;\nbreak;\n}",
+            var, comands, atr.text
+        );
+    } else {
+        asprintf(
+            &out->text,
+            "int x%d;\nfor(;;){\n%sx%d=0;\nbreak;\n}",
+            var, comands, var
+        );
+    }
+}
+
+void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
+
+    unsigned int var = nextVar();
+    out->var = var;
+
+
+    Expr xvar = { 0, var };
+    asprintf(&xvar.text, "x%d", var);
+
+    Expr atr_then = { 0, 0 };
+    atribuicao("=", &atr_then, &xvar, then);
+
+    Expr atr_else = { 0, 0 };
+    if (otherwise->text != NULL) {
+        atribuicao("=", &atr_else, &xvar, otherwise);
+    } else {
+        atr_else.text = "";
+    }
+
+    int v = cond->var;
+    if (v > 0) {
+        // int x<var>;
+        // {
+        //   <cond>
+        //   if (x<cond.var>) {
+        //     <atr(x<var>, <then>)>
+        //   } else {
+        //     <atr(x<var>, <otherwise>)>
+        //   }
+        // }
+        asprintf(&out->text, "int x%d;\n{\n%s\nif(x%d){\n%s;\n}else{\n%s;\n}}",
+            var, cond->text, cond->var, atr_then.text, atr_else.text
+        );
+    } else {
+        // if (<cond>) {
+        //   <atr(x<var>, <then>)>
+        // } else {
+        //   <atr(x<var>, <otherwise>)>
+        // }
+        asprintf(&out->text, "int x%d;\nif(%s){\n%s;\n}else{\n%s;\n}",
+            var, cond->text, atr_then.text, atr_else.text
+        );
+    }
+}
+
+void programa(Expr *prog) {
+    const char *prelude = "#include \"../header.h\"\n";
+
+    printf("%sint main() {\n%sreturn 0;\n}\n", 
+        prelude, prog->text ? prog->text : ""
+    ); 
+}
+
+Expr NONE = { NULL, 0 };
 
 %}
 
@@ -100,8 +308,8 @@ Expr NONE = { 0 };
 %%
 
 programa
-    :          { printf("\n"); }
-    | comandos { printf("%s\n", $1.text); }
+    :          { programa(&NONE); }
+    | comandos { programa(&$1); }
 
 comandos
     : expr PONTOEVIRGULA          { comando(&$$, &NONE, &$1); }
@@ -160,19 +368,19 @@ exprsVirgula
     | exprsVirgula VIRGULA expr { parametro(&$$, &$1, &$3); }
 
 declaracao
-    : IDENTIFICADOR DECLARACAO expr { binop(":=", &$$, &$1, &$3); }
+    : IDENTIFICADOR DECLARACAO expr { declaracao( &$$, &$1, &$3); }
 
 opAtribuicao
-    : IDENTIFICADOR ATRIBUICAO expr      { binop("=", &$$, &$1, &$3); }
-    | IDENTIFICADOR SOMA_ATRIBUICAO expr { binop("+=", &$$, &$1, &$3); }
-    | IDENTIFICADOR SUB_ATRIBUICAO expr  { binop("-=", &$$, &$1, &$3); }
-    | IDENTIFICADOR MULT_ATRIBUICAO expr { binop("*=", &$$, &$1, &$3); }
-    | IDENTIFICADOR DIV_ATRIBUICAO expr  { binop("/=", &$$, &$1, &$3); }
-    | IDENTIFICADOR MOD_ATRIBUICAO expr  { binop("%=", &$$, &$1, &$3); }
+    : IDENTIFICADOR ATRIBUICAO expr      { atribuicao("=", &$$, &$1, &$3); }
+    | IDENTIFICADOR SOMA_ATRIBUICAO expr { atribuicao("+=", &$$, &$1, &$3); }
+    | IDENTIFICADOR SUB_ATRIBUICAO expr  { atribuicao("-=", &$$, &$1, &$3); }
+    | IDENTIFICADOR MULT_ATRIBUICAO expr { atribuicao("*=", &$$, &$1, &$3); }
+    | IDENTIFICADOR DIV_ATRIBUICAO expr  { atribuicao("/=", &$$, &$1, &$3); }
+    | IDENTIFICADOR MOD_ATRIBUICAO expr  { atribuicao("%=", &$$, &$1, &$3); }
 
 condicao
     : expr INTERROGACAO expr { condicao(&$$, &$1, &$3, &NONE); }
-    | expr INTERROGACAO expr DOIS_PONTOS expr { condicao(&$$, &$1, &$3, &$4); }
+    | expr INTERROGACAO expr DOIS_PONTOS expr { condicao(&$$, &$1, &$3, &$5); }
 
 bloco
     : INICIO_BLOCO FIM_BLOCO
@@ -194,13 +402,13 @@ bloco
     { bloco(&$$, &$1, &$4, &$5); }
 
 return
-    : RETURN                 { uniop("<-", &$$, &NONE); }
-    | RETURN expr            { uniop("<-", &$$, &$2);}
-    | RETURN NOME_BLOCO      { uniop("<-", &$$, &NONE); }
-    | RETURN NOME_BLOCO expr { uniop("<-", &$$, &$3);}
+    : RETURN                 { retorna(&$$, &NONE, &NONE); }
+    | RETURN expr            { retorna(&$$, &NONE, &$2);}
+    | RETURN NOME_BLOCO      { retorna(&$$, &$1, &NONE); }
+    | RETURN NOME_BLOCO expr { retorna(&$$, &$1, &$3);}
 
 continue
-    : CONTINUE NOME_BLOCO { uniop("->", &$$, &$2); }
+    : CONTINUE NOME_BLOCO { continua(&$$, &$2); }
 
 /*
 funcao: ABRE_PARENTESES identificadoresVirgula FECHA_PARENTESES SETA_DUPLA expr 

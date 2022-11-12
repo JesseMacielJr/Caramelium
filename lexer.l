@@ -1,13 +1,30 @@
 %{
 
-  #include <stdio.h>
-  #include "expr.h"
+#include <stdio.h>
+#include "expr.h"
 
-  int yylex();
-  extern Expr yylval;
-  #include "parser.tab.h"
+int yylex();
+extern Expr yylval;
+#include "parser.tab.h"
 
-  yytoken_kind_t literal(yytoken_kind_t token);
+yytoken_kind_t identificador(yytoken_kind_t token) {
+    // todos os identificadores são préfixados com '_' para evitar conflito com
+    // variaveis criadas na compilação.
+    size_t len = strlen(yytext) + 1;
+    void *buffer = malloc (len + 1);
+    memcpy (buffer+1, yytext, len);
+
+    yylval.text = buffer;
+    yylval.text[0] = '_';
+    yylval.var = 0;
+    return token;
+}
+
+yytoken_kind_t literal(yytoken_kind_t token) {
+    yylval.text = strdup(yytext);
+    yylval.var = 0;
+    return token;
+}
 %}
 
 %option yylineno
@@ -27,7 +44,7 @@
 [0-9]+("."[0-9]*)([eE]"-"?[0-9]*)? { 
   return literal(FLOAT);
 }
-[a-zA-Z][a-zA-z0-9]* { return literal(IDENTIFICADOR); }
+[a-zA-Z][a-zA-z0-9]* { return identificador(IDENTIFICADOR); }
 
 \".*\" { return literal(STRING); }
 
@@ -63,11 +80,6 @@
 .       {return *yytext;}
 	
 %%	
-
-yytoken_kind_t literal(yytoken_kind_t token) {
-    yylval.text = strdup(yytext);
-    return token;
-}
 
 int yywrap(void){
   return 1; 
