@@ -249,7 +249,34 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
 }
 
 void programa(Expr *prog) {
-    const char *prelude = "#include \"../header.h\"\n";
+    const char *prelude = 
+    "#include <stdarg.h>\n"
+    "#include <stdint.h>\n"
+    "#include <stdio.h>\n"
+    "\n"
+    "#define int int64_t\n"
+    "\n"
+    "void _escrever(int string, ...) {\n"
+    "  va_list args;\n"
+    "  va_start(args, string);\n"
+    "\n"
+    "  char *text = (char *)string;\n"
+    "\n"
+    "  vprintf(text, args);\n"
+    "  printf(\"\\n\");\n"
+    "\n"
+    "  va_end(args);\n"
+    "}\n"
+    "\n"
+    "int _ler(int string) {\n"
+    "  char *text = (char *)string;\n"
+    "  printf(\"%s \", text);\n"
+    "\n"
+    "  int out;\n"
+    "  scanf(\"%ld\", &out);\n"
+    "  return out;\n"
+    "}\n"
+    ;
 
     printf("%sint main() {\n%sreturn 0;\n}\n", 
         prelude, prog->text ? prog->text : ""
