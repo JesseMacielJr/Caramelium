@@ -4,10 +4,10 @@
 
 #define int int64_t
 void _escrever(int string, ...) {
-    char* text = (char*) string;
-
     va_list args;
-    va_start(args,text);
+    va_start(args,string);
+
+    char* text = (char*) string;
 
     vprintf(text, args);
     printf("\n");
