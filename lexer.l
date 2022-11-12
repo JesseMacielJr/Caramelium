@@ -7,7 +7,7 @@ int yylex();
 extern Expr yylval;
 #include "parser.tab.h"
 
-yytoken_kind_t identificador(yytoken_kind_t token) {
+int identificador(int token) {
     // todos os identificadores são préfixados com '_' para evitar conflito com
     // variaveis criadas na compilação.
     size_t len = strlen(yytext) + 1;
@@ -21,6 +21,7 @@ yytoken_kind_t identificador(yytoken_kind_t token) {
 }
 
 yytoken_kind_t literal(yytoken_kind_t token) {
+int literal(int token) {
     yylval.text = strdup(yytext);
     yylval.var = 0;
     return token;
