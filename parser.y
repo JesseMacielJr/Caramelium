@@ -1,6 +1,16 @@
 %{
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "asprintf.h"
+
+#include "expr.h"
+#define YYSTYPE Expr
+
+Expr yylval;
+
+#include "lex.yy.c"
+
 #define YYERROR_VERBOSE
 int yylex();
 int yyparse();
@@ -12,10 +22,6 @@ unsigned int nextVar() {
     varCounter += 1;
     return varCounter;
 }
-
-#include "expr.h"
-
-Expr yylval;
 
 char* concat(char* stra, char* strb) {
     size_t lena = strlen(stra);
@@ -254,8 +260,6 @@ Expr NONE = { NULL, 0 };
 
 %}
 
-%define api.value.type {Expr}
-
 %token INICIO_BLOCO
 %token FIM_BLOCO
 %token DECLARACAO
@@ -426,4 +430,9 @@ const char* token_name(int t) {
 
 void yyerror(const char *s) {
     fprintf(stderr,"Error | Line: %d\n%s\n",yylineno,s);
+}
+
+int main(int argc, char *argv[]) {
+    yydebug = 0;
+    yyparse();
 }
