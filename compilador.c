@@ -1,5 +1,3 @@
-#define YYDEBUG 1
-
 #include "lex.yy.c"
 #include "parser.tab.c"
 
