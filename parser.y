@@ -461,5 +461,15 @@ void yyerror(const char *s) {
 
 int main(int argc, char *argv[]) {
     yydebug = 0;
+    
+    if (argc != 2) {
+        fprintf(stderr, "É esperado o caminho do arquivo fonte como argumento.\n");
+        return 1;
+    }
+
+    yyin = fopen(argv[1], "r");
+
     yyparse();
+
+    fclose(yyin);
 }
