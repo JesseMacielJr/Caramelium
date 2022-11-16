@@ -35,4 +35,5 @@ Uso: compilador [OPÇÕES] ARQUIVO
 ARQUIVO         O arquivo fonte.
 -o ARQUIVO      Escreve o código transpilado para C em ARQUIVO.
 --run           Transpila, compila e roda o programa.
+--tokens        Imprime os tokens do código fonte na tela
 ```

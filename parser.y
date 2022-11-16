@@ -490,9 +490,12 @@ int main(int argc, char *argv[]) {
     FILE *input = NULL;
     FILE *output = stdout;
     bool build_and_run = false;
+    bool print_tokens = false;
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
-            if (strcmp(argv[i], "--run") == 0) {
+            if (strcmp(argv[i], "--tokens") == 0) {
+                print_tokens = true;
+            } else if (strcmp(argv[i], "--run") == 0) {
                 struct stat st = {0};
                 if (stat("build", &st) == -1) {
                     _mkdir("build");
@@ -537,6 +540,16 @@ int main(int argc, char *argv[]) {
     }
 
     yyin = input;
+
+    if (print_tokens) {
+        for (;;) {
+            int token = yylex();
+            if (token == 0) break;
+
+            printf("%-17s %s\n", token_name(token), yytext);
+        }
+        return 0;
+    }
 
     Context ctx = { output };
 
