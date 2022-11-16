@@ -147,13 +147,21 @@ void parametro(Expr *out, Expr *tail, Expr *param) {
 
 void atribuicao(const char* op, Expr *out, Expr *id, Expr *r) {
     int v = r->var;
+    int var = nextVar();
+    out->var = var;
     if (v > 0) {
         // <r>
         // <id> <op> x<r.var>;
-        asprintf(&out->text, "%s\n%s %s x%d", r->text, id->text, op, r->var);
+        // int x<var> = <id>;
+        asprintf(&out->text, "%s\n%s %s x%d;\nint x%d = %s;",
+            r->text, id->text, op, r->var, var, id->text
+        );
     } else {
         // %id <op> <r>;
-        asprintf(&out->text, "%s %s %s", id->text, op, r->text);
+        // int x<var> = <id>;
+        asprintf(&out->text, "%s %s %s; int x%d = %s;",
+            id->text, op, r->text, var, id->text
+        );
     }
 }
 
@@ -165,7 +173,10 @@ void declaracao(Expr *out, Expr *id, Expr *r) {
     Expr atr = { 0, 0 };
     atribuicao("=", &atr, id, r);
 
-    asprintf(&out->text, "int %s;\n%s", id->text, atr.text);
+    asprintf(&out->text, "int %s;\n%s\n",
+        id->text, atr.text
+    );
+    out->var = atr.var;
 }
 
 int get_bloco(Context *ctx, char *nome_bloco) {
@@ -198,7 +209,7 @@ void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
     out->var = nextVar();
 
     if (nome_bloco->text == NULL) {
-        asprintf(&out->text, "int x%d = 0; return;\n", out->var);
+        asprintf(&out->text, "int x%d = 0; return 0;\n", out->var);
         return;
     }
 
