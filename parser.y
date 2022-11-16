@@ -407,7 +407,7 @@ comandos
 
 expr: literal
     | IDENTIFICADOR
-    | ABRE_PARENTESES expr FECHA_PARENTESES
+    | ABRE_PARENTESES expr FECHA_PARENTESES { $$ = $2; }
     | opAritmetica
     | opLogica
     | opRelacional
