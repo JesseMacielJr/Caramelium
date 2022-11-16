@@ -472,8 +472,16 @@ void yyerror(Context *ctx, const char *s) {
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 const bool windows = true;
+
+void _mkdir(char *path) {
+    mkdir(path);
+}
 #else
 const bool windows = false;
+
+void _mkdir(char *path) {
+    mkdir(path, 0700);
+}
 #endif
 
 int main(int argc, char *argv[]) {
@@ -487,7 +495,7 @@ int main(int argc, char *argv[]) {
             if (strcmp(argv[i], "--run") == 0) {
                 struct stat st = {0};
                 if (stat("build", &st) == -1) {
-                    mkdir("build");
+                    _mkdir("build");
                 }
                 output = fopen("build/out.c", "w");
                 if (output == NULL) {
