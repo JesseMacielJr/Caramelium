@@ -4,7 +4,7 @@ b := 1;
 n := $entrada: {
     n := ler("digite um número de interações:");
     n < 0 ? {
-        escrever("o número não pode ser negativo");
+        escreverln("o número não pode ser negativo");
         -> $entrada;
     };
     n
@@ -13,7 +13,7 @@ n := $entrada: {
 $laço: {
     n -= 1;
     n == 0 ? <- $laço;
-    escrever("%lld", a);
+    escreverln("%lld", a);
     next := a + b;
     a = b;
     b = next;
