@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "asprintf.h"
 
 #include "expr.h"
@@ -466,14 +467,35 @@ void yyerror(Context *ctx, const char *s) {
     fprintf(stderr,"Error | Line: %d\n%s\n",yylineno,s);
 }
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+const bool windows = true;
+#else
+const bool windows = false;
+#endif
+
 int main(int argc, char *argv[]) {
     yydebug = 0;
 
     FILE *input = NULL;
     FILE *output = stdout;
+    bool build_and_run = false;
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
-            if (strcmp(argv[i], "-o") == 0) {
+            if (strcmp(argv[i], "--run") == 0) {
+                struct stat st = {0};
+                if (stat("build", &st) == -1) {
+                    mkdir("build");
+                }
+                output = fopen("build/out.c", "w");
+                if (output == NULL) {
+                    fprintf(stderr, "Arquivo de saída não encontrado\n");
+                    return 5;
+                }
+                build_and_run = true;
+            } else if (strcmp(argv[i], "-o") == 0) {
                 i++;
                 if (output != stdout) {
                     fprintf(stderr, "É esperado apenas um arquivo de saída.\n");
@@ -514,4 +536,14 @@ int main(int argc, char *argv[]) {
 
     fclose(yyin);
     fclose(output);
+
+    if (build_and_run) {
+        if (windows) {
+            system("gcc build\\out.c -o build\\out.exe");
+            system(".\\build\\out.exe");
+        } else {
+            system("gcc build/out.c -o build/out.exe");
+            system("./build/out.exe");
+        }
+    }
 }
