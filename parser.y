@@ -9,13 +9,18 @@
 
 Expr yylval;
 
+struct Context {
+    FILE *output;
+};
+typedef struct Context Context;
+
 #include "lex.yy.c"
 
 #define YYERROR_VERBOSE
-int yylex();
-int yyparse();
-void yyerror(const char *s);
 
+int yylex();
+int yyparse(Context *ctx);
+void yyerror(Context *ctx, const char *s);
 
 unsigned int nextVar() {
     static unsigned int varCounter = 0;
@@ -248,7 +253,7 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
     }
 }
 
-void programa(Expr *prog) {
+void programa(Context *ctx, Expr *prog) {
     const char *prelude = 
     "#include <stdarg.h>\n"
     "#include <stdint.h>\n"
@@ -278,7 +283,7 @@ void programa(Expr *prog) {
     "}\n"
     ;
 
-    printf("%sint main() {\n%sreturn 0;\n}\n", 
+    fprintf(ctx->output, "%sint main() {\n%sreturn 0;\n}\n", 
         prelude, prog->text ? prog->text : ""
     ); 
 }
@@ -336,11 +341,13 @@ Expr NONE = { NULL, 0 };
 %left MULT DIV MOD
 %left NOT // also unary MINUS
 
+%parse-param {Context *ctx}
+
 %%
 
 programa
-    :          { programa(&NONE); }
-    | comandos { programa(&$1); }
+    :          { programa(ctx, &NONE); }
+    | comandos { programa(ctx, &$1); }
 
 comandos
     : expr PONTOEVIRGULA          { comando(&$$, &NONE, &$1); }
@@ -455,21 +462,56 @@ const char* token_name(int t) {
     return yytname[YYTRANSLATE(t)];
 }
 
-void yyerror(const char *s) {
+void yyerror(Context *ctx, const char *s) {
     fprintf(stderr,"Error | Line: %d\n%s\n",yylineno,s);
 }
 
 int main(int argc, char *argv[]) {
     yydebug = 0;
+
+    FILE *input = NULL;
+    FILE *output = stdout;
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            if (strcmp(argv[i], "-o") == 0) {
+                i++;
+                if (output != stdout) {
+                    fprintf(stderr, "É esperado apenas um arquivo de saída.\n");
+                    return 2;
+                }
+                output = fopen(argv[i], "w");
+                if (output == NULL) {
+                    fprintf(stderr, "Arquivo de saída não encontrado\n");
+                    return 5;
+                }
+            } else {
+                fprintf(stderr, "Opção '%s' desconhecida\n", argv[i]);
+                return 6;
+            }
+        } else {
+            if (input != NULL) {
+                fprintf(stderr, "É esperado apenas um arquivo fonte.\n");
+                return 3;
+            }
+            input = fopen(argv[i], "r");
+            if (input == NULL) {
+                fprintf(stderr, "Arquivo fonte não encontrado\n");
+                return 4;
+            }
+        }
+    }
     
-    if (argc != 2) {
+    if (input == NULL) {
         fprintf(stderr, "É esperado o caminho do arquivo fonte como argumento.\n");
         return 1;
     }
 
-    yyin = fopen(argv[1], "r");
+    yyin = input;
 
-    yyparse();
+    Context ctx = { output };
+
+    yyparse(&ctx);
 
     fclose(yyin);
+    fclose(output);
 }
