@@ -443,8 +443,8 @@ opRelacional
     | expr NOT_IGUAL expr    { binop("!=", &$$, &$1, &$3); }
     | expr MENOR expr        { binop("<", &$$, &$1, &$3); }
     | expr MAIOR expr        { binop(">", &$$, &$1, &$3); }
-    | expr MENOR_IGUAL expr  { binop(">=", &$$, &$1, &$3); }
-    | expr MAIOR_IGUAL expr  { binop("<=", &$$, &$1, &$3); }
+    | expr MENOR_IGUAL expr  { binop("<=", &$$, &$1, &$3); }
+    | expr MAIOR_IGUAL expr  { binop(">=", &$$, &$1, &$3); }
 
 chamadaFuncao
     : IDENTIFICADOR ABRE_PARENTESES exprsVirgula FECHA_PARENTESES
