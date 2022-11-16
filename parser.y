@@ -12,6 +12,8 @@ Expr yylval;
 
 struct Context {
     FILE *output;
+    int blocos_len;
+    char *blocos[16];
 };
 typedef struct Context Context;
 
@@ -24,9 +26,9 @@ int yyparse(Context *ctx);
 void yyerror(Context *ctx, const char *s);
 
 unsigned int nextVar() {
-    static unsigned int varCounter = 0;
-    varCounter += 1;
-    return varCounter;
+    static unsigned int var_counter = 0;
+    var_counter += 1;
+    return var_counter;
 }
 
 char* concat(char* stra, char* strb) {
@@ -166,28 +168,66 @@ void declaracao(Expr *out, Expr *id, Expr *r) {
     asprintf(&out->text, "int %s;\n%s", id->text, atr.text);
 }
 
-void retorna(Expr *out, Expr *nome_bloco, Expr *expr) {
+int get_bloco(Context *ctx, char *nome_bloco) {
+    for (int i = 0; i < ctx->blocos_len; i++) {
+        if (strcmp(nome_bloco, ctx->blocos[i]) == 0) {
+            return i;
+        }
+    }
+    
+    return -1;
+}
+
+int add_bloco(Context *ctx, char *nome_bloco) {
+    int bloco = get_bloco(ctx, nome_bloco);
+    if (bloco != -1) {
+        return bloco;
+    }
+
+    ctx->blocos[ctx->blocos_len++] = nome_bloco;
+    return ctx->blocos_len - 1;
+}
+
+void continua(Context *ctx, Expr *out, Expr *nome_bloco) {
     out->var = nextVar();
-    asprintf(&out->text, "int x%d; break;\n", out->var);
+    int bloco = add_bloco(ctx, nome_bloco->text);
+    asprintf(&out->text, "int x%d = 0; goto S%d;\n", out->var, bloco);
 }
 
-void continua(Expr *out, Expr *nome_bloco) {
-    asprintf(&out->text, "continue;\n");
+void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
+    out->var = nextVar();
+
+    if (nome_bloco->text == NULL) {
+        asprintf(&out->text, "int x%d = 0; return;\n", out->var);
+        return;
+    }
+
+    int bloco = add_bloco(ctx, nome_bloco->text);
+    asprintf(&out->text, "int x%d = 0; goto E%d;\n", out->var, bloco);
 }
 
-void bloco(Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
+void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
     // int x<var>;
-    // for(;;){
+    // S<bloco>: {
     // <comands>
     // <atr(x<var>, <expr>)>
     // break;
-    // }
+    // } E<bloco>:
     
     unsigned int var = nextVar();
     out->var = var;
     char* label = nome->text ? nome->text : "";
     char* comands = comandos->text ? comandos->text : "";
     char* expression = expr->text ? expr->text : "0";
+
+    int bloco = nome->text ? add_bloco(ctx, nome->text) : -1;
+
+    char* bloco_start = ""; 
+    char* bloco_end   = "";
+    if (bloco != -1) {
+        asprintf(&bloco_start, "S%d:", bloco);
+        asprintf(&bloco_end, "E%d:", bloco);
+    }
 
     if (expr->text != NULL) {
         Expr atr = { 0, 0 };
@@ -197,14 +237,14 @@ void bloco(Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
 
         asprintf(
             &out->text,
-            "int x%d;\nfor(;;){\n%s%s;\nbreak;\n}",
-            var, comands, atr.text
+            "int x%d;\n%s{\n%s%s;\n}%s",
+            var, bloco_start, comands, atr.text, bloco_end
         );
     } else {
         asprintf(
             &out->text,
-            "int x%d;\nfor(;;){\n%sx%d=0;\nbreak;\n}",
-            var, comands, var
+            "int x%d;\n%s{\n%sx%d=0;\n}%s",
+            var, bloco_start, comands, var, bloco_end
         );
     }
 }
@@ -423,31 +463,31 @@ condicao
 
 bloco
     : INICIO_BLOCO FIM_BLOCO
-    { bloco(&$$, &NONE, &NONE, &NONE); }
+    { bloco(ctx, &$$, &NONE, &NONE, &NONE); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO FIM_BLOCO
-    { bloco(&$$, &$1, &NONE, &NONE); }
+    { bloco(ctx, &$$, &$1, &NONE, &NONE); }
     | INICIO_BLOCO expr FIM_BLOCO
-    { bloco(&$$, &NONE, &NONE, &$3); }
+    { bloco(ctx, &$$, &NONE, &NONE, &$3); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO expr FIM_BLOCO
-    { bloco(&$$, &$1, &NONE, &$5); }
+    { bloco(ctx, &$$, &$1, &NONE, &$5); }
 
     | INICIO_BLOCO comandos FIM_BLOCO
-    { bloco(&$$, &NONE, &$2, &NONE); }
+    { bloco(ctx, &$$, &NONE, &$2, &NONE); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos FIM_BLOCO
-    { bloco(&$$, &$1, &$4, &NONE); }
+    { bloco(ctx, &$$, &$1, &$4, &NONE); }
     | INICIO_BLOCO comandos expr FIM_BLOCO
-    { bloco(&$$, &NONE, &$2, &$3); }
+    { bloco(ctx, &$$, &NONE, &$2, &$3); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos expr FIM_BLOCO
-    { bloco(&$$, &$1, &$4, &$5); }
+    { bloco(ctx, &$$, &$1, &$4, &$5); }
 
 return
-    : RETURN                 { retorna(&$$, &NONE, &NONE); }
-    | RETURN expr            { retorna(&$$, &NONE, &$2);}
-    | RETURN NOME_BLOCO      { retorna(&$$, &$1, &NONE); }
-    | RETURN NOME_BLOCO expr { retorna(&$$, &$1, &$3);}
+    : RETURN                 { retorna(ctx, &$$, &NONE, &NONE); }
+    | RETURN expr            { retorna(ctx, &$$, &NONE, &$2);}
+    | RETURN NOME_BLOCO      { retorna(ctx, &$$, &$2, &NONE); }
+    | RETURN NOME_BLOCO expr { retorna(ctx, &$$, &$2, &$3);}
 
 continue
-    : CONTINUE NOME_BLOCO { continua(&$$, &$2); }
+    : CONTINUE NOME_BLOCO { continua(ctx, &$$, &$2); }
 
 /*
 funcao: ABRE_PARENTESES identificadoresVirgula FECHA_PARENTESES SETA_DUPLA expr 
@@ -551,7 +591,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    Context ctx = { output };
+    Context ctx = { output, 0, {} };
 
     yyparse(&ctx);
 
