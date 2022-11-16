@@ -67,7 +67,7 @@ int literal(int token) {
 }
 [a-zA-Z][a-zA-z0-9]* { return identificador(IDENTIFICADOR); }
 
-\".*\" { return string(STRING); }
+\"(\\.|[^"\\])*\" { return string(STRING); }
 
 \$[a-zA-Zç][a-zA-z0-9ç]*   { return literal(NOME_BLOCO); }
 
