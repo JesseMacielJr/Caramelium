@@ -1,0 +1,32 @@
+// A linguagem não possui suporte para ponto flutuando, então todos os cálculos
+// serão feitos com números inteiros com esse valor de escala.
+is := 65536;
+y := 0;
+$lin: { 
+    y >= 130 ? <- $lin;
+    x := 0;
+    $col: {
+        x >= 150 ? <- $col;
+        cr := x * (is / 64) - (is*5/3);
+        ci := y * (is / 64) - is;
+
+        i := 0;
+        j := 0;
+        iter := 0;
+
+        $while: { 
+            !(i * i + j * j < 4*is*is && iter < 255) ? <- $while;
+            ni := (i * i) / is - (j * j) / is + cr;
+            j = 2 * (i * j) / is + ci;
+            i = ni;
+            iter += 1;
+            -> $while;
+        };
+        escrever(iter == 255 ? { " " } : { "#" });
+        x += 1;
+        -> $col;
+    };
+    y += 2;
+    escreverln("");
+    -> $lin;
+};
