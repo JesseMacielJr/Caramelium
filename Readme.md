@@ -1,6 +1,5 @@
 # Requisitos
 
-
 É necessário possuir os seguintes programas instalados:
 
 - Bison 2.4.1 ou superior
@@ -18,13 +17,13 @@ bison -d parser.y --debug
 flex lexer.l 
 gcc parser.tab.c -o compilador
 
-compilador fibonacci.dog --run
+compilador programas/fibonacci.dog --run
 ```
 
 Ou use o arquivo `executa.bat`:
 
 ```
-executa.bat fibonacci.dog --run
+executa.bat programas/fibonacci.dog --run
 ```
 
 ## Argumentos de linha de comando:
