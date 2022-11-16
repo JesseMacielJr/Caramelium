@@ -600,7 +600,11 @@ int main(int argc, char *argv[]) {
 
     if (build_and_run) {
         if (windows) {
-            system("gcc build\\out.c -o build\\out.exe");
+            int res = system("gcc build\\out.c -o build\\out.exe");
+            if (res != 0) {
+                fprintf(stderr, "Compilação falhou.");
+                return 7;
+            }
             system(".\\build\\out.exe");
         } else {
             system("gcc build/out.c -o build/out.exe");
