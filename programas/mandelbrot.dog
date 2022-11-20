@@ -3,12 +3,12 @@
 is := 65536;
 y := 0;
 $lin: { 
-    y >= 130 ? <- $lin;
+    y >= 146 ? <- $lin;
     x := 0;
     $col: {
         x >= 150 ? <- $col;
         cr := x * (is / 64) - (is*5/3);
-        ci := y * (is / 64) - is;
+        ci := y * (is / 64) - (is*9/8);
 
         i := 0;
         j := 0;
@@ -22,7 +22,21 @@ $lin: {
             iter += 1;
             -> $while;
         };
-        escrever(iter == 255 ? { " " } : { "#" });
+        //  .:-=+*#%@
+        c := $char: {
+            iter <= 2 ? "@"
+            : iter == 3 ? "%%"
+            : iter == 4 ? "#"
+            : iter == 5 ? "*"
+            : iter == 6 ? "+"
+            : iter == 7 ? "="
+            : iter == 8 ? "-"
+            : iter == 9 ? ":"
+            : iter == 10 ? "."
+            : iter == 255 ? " "
+            : { iter -= 13; -> $char; }
+        };
+        escrever(c);
         x += 1;
         -> $col;
     };
