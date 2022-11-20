@@ -488,9 +488,9 @@ bloco
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO FIM_BLOCO
     { bloco(ctx, &$$, &$1, &NONE, &NONE); }
     | INICIO_BLOCO expr FIM_BLOCO
-    { bloco(ctx, &$$, &NONE, &NONE, &$3); }
+    { bloco(ctx, &$$, &NONE, &NONE, &$2); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO expr FIM_BLOCO
-    { bloco(ctx, &$$, &$1, &NONE, &$5); }
+    { bloco(ctx, &$$, &$1, &NONE, &$4); }
 
     | INICIO_BLOCO comandos FIM_BLOCO
     { bloco(ctx, &$$, &NONE, &$2, &NONE); }
