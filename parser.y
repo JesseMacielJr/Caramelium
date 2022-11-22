@@ -532,6 +532,7 @@ void yyerror(Context *ctx, const char *s) {
 #include <sys/types.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+int SetConsoleOutputCP(unsigned int wCodePageID);
 const bool windows = true;
 
 void _mkdir(char *path) {
@@ -546,6 +547,9 @@ void _mkdir(char *path) {
 #endif
 
 int main(int argc, char *argv[]) {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    SetConsoleOutputCP(65001);
+#endif
     yydebug = 0;
 
     FILE *input = NULL;
