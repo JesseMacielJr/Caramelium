@@ -22,25 +22,6 @@ int identificador(int token) {
     return token;
 }
 
-int string(int token) {
-    // strings são préfixadas com um cast para (int), porque por enquanto todos
-    // os tipos são int.
-
-    size_t len = strlen(yytext) + 1;
-    void *buffer = malloc (len + 5);
-    memcpy (buffer+5, yytext, len);
-
-    yylval.text = buffer;
-    yylval.text[0] = '(';
-    yylval.text[1] = 'i';
-    yylval.text[2] = 'n';
-    yylval.text[3] = 't';
-    yylval.text[4] = ')';
-    yylval.var = 0;
-
-    return token;
-}
-
 int literal(int token) {
     yylval.text = strdup(yytext);
     yylval.var = 0;
@@ -67,7 +48,7 @@ int literal(int token) {
 }
 [a-zA-Z][a-zA-z0-9]* { return identificador(IDENTIFICADOR); }
 
-\"(\\.|[^"\\])*\" { return string(STRING); }
+\"(\\.|[^"\\])*\" { return literal(STRING); }
 
 \$[a-zA-Zç][a-zA-z0-9ç]*   { return literal(NOME_BLOCO); }
 

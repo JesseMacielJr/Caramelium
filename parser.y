@@ -10,6 +10,11 @@
 
 Expr yylval;
 
+// The C type of each Caramellium type.
+char const *ctypes[] = {"int64_t", "double", "char const *"};
+
+char const *type_names[] = {"inteiro", "float", "string"};
+
 struct Context {
     FILE *output;
     int blocos_len;
@@ -45,16 +50,18 @@ void comando(Expr *out, Expr *tail, Expr *comando) {
 }
 
 void uniop(const char* op, Expr *out, Expr *r) {
+    out->type = r->type;
     if (r->var > 0) {
-        // int x<var>; 
+        // <type> x<var>; 
         // {
         // <r>
         // x<var> = <op> x<r.var>;
         // }
         int var = nextVar();
         out->var = var;
-        asprintf(&out->text, "int x%d;\n{\n%s\nx%d=%sx%d;\n}",
-            var, r->text, var, op, r->var
+        char const *type = ctypes[r->type];
+        asprintf(&out->text, "%s x%d;\n{\n%s\nx%d=%sx%d;\n}",
+            type, var, r->text, var, op, r->var
         );
     } else {
         // <op> <r>
@@ -63,8 +70,19 @@ void uniop(const char* op, Expr *out, Expr *r) {
 }
 
 void binop(const char* op, Expr *out, Expr *l, Expr *r) {
+    if (l->type != r->type) {
+        char *error;
+        asprintf(&error, "operação com tipos incompatíveis: esquerda é '%s', mas direita é '%s'",
+            type_names[l->type], type_names[r->type]
+        );
+        yyerror(NULL, error);
+        r->type = l->type;
+        /* exit(1); */
+    }
+    out->type = r->type;
+
     if (l->var > 0 && r->var > 0) {
-        // int x<var>; 
+        // <type> x<var>; 
         // {
         // <l>
         // <r>
@@ -72,30 +90,34 @@ void binop(const char* op, Expr *out, Expr *l, Expr *r) {
         // }
         int var = nextVar();
         out->var = var;
-        asprintf(&out->text, "int x%d;\n{\n%s\n%s\nx%d=x%d%sx%d;\n}",
-            var, l->text, r->text, var, l->var, op, r->var
+
+        char const *type = ctypes[l->type];
+        asprintf(&out->text, "%s x%d;\n{\n%s\n%s\nx%d=x%d%sx%d;\n}",
+            type, var, l->text, r->text, var, l->var, op, r->var
         );
     } else if (l->var > 0 && r->var == 0) {
-        // int x<var>; 
+        // <type> x<var>; 
         // {
         // <l>
         // x<var> = x<l.var> <op> <r>;
         // }
         int var = nextVar();
         out->var = var;
-        asprintf(&out->text, "int x%d;\n{\n%s\nx%d=x%d%s%s;\n}",
-            var, l->text, var, l->var, op, r->text
+        char const *type = ctypes[l->type];
+        asprintf(&out->text, "%s x%d;\n{\n%s\nx%d=x%d%s%s;\n}",
+            type, var, l->text, var, l->var, op, r->text
         );
     } else if (l->var == 0 && r->var > 0) {
-        // int x<var>; 
+        // <type> x<var>; 
         // {
         // <r>
         // x<var> = <l> <op> x<r.var>;
         // }
         int var = nextVar();
         out->var = var;
-        asprintf(&out->text, "int x%d;\n{\n%s\nx%d=%s%sx%d;\n}",
-            var, r->text, var, l->text, op, r->var
+        char const *type = ctypes[l->type];
+        asprintf(&out->text, "%s x%d;\n{\n%s\nx%d=%s%sx%d;\n}",
+            type, var, r->text, var, l->text, op, r->var
         );
     } else {
         // <l> <op> <r>
@@ -108,15 +130,16 @@ void escrever_parametros(char **prelude, char **params, Expr* parametros) {
         escrever_parametros(prelude, params, parametros->tail);
     }
     if (parametros->var > 0) {
-        // int x<var>;
+        // <type> x<var>;
         // {
         // <parametros>
         // x<var> = x<parametros.var>
         // }
+        char const *type = ctypes[parametros->type];
         int var = nextVar();
         char *out;
-        asprintf(&out, "int x%d;\n{\n%s\nx%d=x%d;\n}\n",
-            var, parametros->text, var, parametros->var
+        asprintf(&out, "%s x%d;\n{\n%s\nx%d=x%d;\n}\n",
+            type, var, parametros->text, var, parametros->var
         );
         *prelude = concat(*prelude, out);
         char *xvar;
@@ -134,6 +157,7 @@ void chamada_funcao(Expr *out, Expr *nome, Expr *parametros) {
     char* params = "";
     escrever_parametros(&prelude, &params, parametros);
     asprintf(&out->text, "%s%s(%s)", prelude, nome->text, params+1);
+    out->type = TY_INTEIRO;
 }
 
 void parametro(Expr *out, Expr *tail, Expr *param) {
@@ -142,6 +166,7 @@ void parametro(Expr *out, Expr *tail, Expr *param) {
         *out->tail = *tail;
     }
     out->var = param->var;
+    out->type = param->type;
     asprintf(&out->text, "%s", param->text);
 }
 
@@ -149,32 +174,36 @@ void atribuicao(const char* op, Expr *out, Expr *id, Expr *r) {
     int v = r->var;
     int var = nextVar();
     out->var = var;
+    char const *type = ctypes[r->type];
+    out->type = r->type;
     if (v > 0) {
         // <r>
         // <id> <op> x<r.var>;
-        // int x<var> = <id>;
-        asprintf(&out->text, "%s\n%s %s x%d;\nint x%d = %s;",
-            r->text, id->text, op, r->var, var, id->text
+        // <type> x<var> = <id>;
+        asprintf(&out->text, "%s\n%s %s x%d;\n%s x%d = %s;",
+            r->text, id->text, op, r->var, type, var, id->text
         );
     } else {
         // %id <op> <r>;
-        // int x<var> = <id>;
-        asprintf(&out->text, "%s %s %s; int x%d = %s;",
-            id->text, op, r->text, var, id->text
+        // <type> x<var> = <id>;
+        asprintf(&out->text, "%s %s %s; %s x%d = %s;",
+            id->text, op, r->text, type, var, id->text
         );
     }
 }
 
 void declaracao(Expr *out, Expr *id, Expr *r) {
     int v = r->var;
-    // int <id>;
+    // <type> <id>;
     // <atr(<id>, <r>)>
 
     Expr atr = { 0, 0 };
     atribuicao("=", &atr, id, r);
 
-    asprintf(&out->text, "int %s;\n%s\n",
-        id->text, atr.text
+    char const *type = ctypes[r->type];
+    out->type = r->type;
+    asprintf(&out->text, "%s %s;\n%s\n",
+        type, id->text, atr.text
     );
     out->var = atr.var;
 }
@@ -202,23 +231,27 @@ int add_bloco(Context *ctx, char *nome_bloco) {
 void continua(Context *ctx, Expr *out, Expr *nome_bloco) {
     out->var = nextVar();
     int bloco = add_bloco(ctx, nome_bloco->text);
-    asprintf(&out->text, "int x%d = 0; goto S%d;\n", out->var, bloco);
+    char const *type = ctypes[TY_INTEIRO];
+    out->type = TY_INTEIRO;
+    asprintf(&out->text, "%s x%d = 0; goto S%d;\n", type, out->var, bloco);
 }
 
 void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
     out->var = nextVar();
 
+    char const *type = ctypes[expr->type];
+    out->type = expr->type;
     if (nome_bloco->text == NULL) {
-        asprintf(&out->text, "int x%d = 0; return 0;\n", out->var);
+        asprintf(&out->text, "%s x%d = 0; return 0;\n", type, out->var);
         return;
     }
 
     int bloco = add_bloco(ctx, nome_bloco->text);
-    asprintf(&out->text, "int x%d = 0; goto E%d;\n", out->var, bloco);
+    asprintf(&out->text, "%s x%d = 0; goto E%d;\n", type, out->var, bloco);
 }
 
 void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
-    // int x<var>;
+    // <type> x<var>;
     // S<bloco>: {
     // <comands>
     // <atr(x<var>, <expr>)>
@@ -230,6 +263,8 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
     char* label = nome->text ? nome->text : "";
     char* comands = comandos->text ? comandos->text : "";
     char* expression = expr->text ? expr->text : "0";
+    char const *type = expr->text ? ctypes[expr->type] : ctypes[0];
+    out->type = expr->type;
 
     int bloco = nome->text ? add_bloco(ctx, nome->text) : -1;
 
@@ -248,19 +283,30 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
 
         asprintf(
             &out->text,
-            "int x%d;\n%s{\n%s%s;\n}%s",
-            var, bloco_start, comands, atr.text, bloco_end
+            "%s x%d;\n%s{\n%s%s;\n}%s",
+            type, var, bloco_start, comands, atr.text, bloco_end
         );
     } else {
         asprintf(
             &out->text,
-            "int x%d;\n%s{\n%sx%d=0;\n}%s",
-            var, bloco_start, comands, var, bloco_end
+            "%s x%d;\n%s{\n%sx%d=0;\n}%s",
+            type, var, bloco_start, comands, var, bloco_end
         );
     }
 }
 
 void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
+
+    if (then->type != otherwise->type) {
+        char *error;
+        asprintf(&error, "condição retorna tipos inconpatíveis: esquerda é '%s', mas direita é '%s'",
+            type_names[then->type], type_names[otherwise->type]
+        );
+        yyerror(NULL, error);
+        otherwise->type = then->type;
+    }
+    out->type = then->type;
+
 
     unsigned int var = nextVar();
     out->var = var;
@@ -279,9 +325,10 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
         atr_else.text = "";
     }
 
+    char const *type = ctypes[then->type];
     int v = cond->var;
     if (v > 0) {
-        // int x<var>;
+        // <type> x<var>;
         // {
         //   <cond>
         //   if (x<cond.var>) {
@@ -290,17 +337,18 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
         //     <atr(x<var>, <otherwise>)>
         //   }
         // }
-        asprintf(&out->text, "int x%d;\n{\n%s\nif(x%d){\n%s;\n}else{\n%s;\n}}",
-            var, cond->text, cond->var, atr_then.text, atr_else.text
+        asprintf(&out->text, "%s x%d;\n{\n%s\nif(x%d){\n%s;\n}else{\n%s;\n}}",
+            type, var, cond->text, cond->var, atr_then.text, atr_else.text
         );
     } else {
+        // <type> x<var>;
         // if (<cond>) {
         //   <atr(x<var>, <then>)>
         // } else {
         //   <atr(x<var>, <otherwise>)>
         // }
-        asprintf(&out->text, "int x%d;\nif(%s){\n%s;\n}else{\n%s;\n}",
-            var, cond->text, atr_then.text, atr_else.text
+        asprintf(&out->text, "%s x%d;\nif(%s){\n%s;\n}else{\n%s;\n}",
+            type, var, cond->text, atr_then.text, atr_else.text
         );
     }
 }
@@ -311,9 +359,8 @@ void programa(Context *ctx, Expr *prog) {
     "#include <stdint.h>\n"
     "#include <stdio.h>\n"
     "\n"
-    "#define int int64_t\n"
     "\n"
-    "void _escrever(int string, ...) {\n"
+    "void _escrever(char *string, ...) {\n"
     "  va_list args;\n"
     "  va_start(args, string);\n"
     "\n"
@@ -323,7 +370,7 @@ void programa(Context *ctx, Expr *prog) {
     "\n"
     "  va_end(args);\n"
     "}\n"
-    "void _escreverln(int string, ...) {\n"
+    "void _escreverln(char *string, ...) {\n"
     "  va_list args;\n"
     "  va_start(args, string);\n"
     "\n"
@@ -335,7 +382,7 @@ void programa(Context *ctx, Expr *prog) {
     "  va_end(args);\n"
     "}\n"
     "\n"
-    "int _ler(int string) {\n"
+    "int _ler(char *string) {\n"
     "  char *text = (char *)string;\n"
     "  printf(\"%s \", text);\n"
     "\n"
@@ -431,9 +478,9 @@ expr: literal
     | continue
 
 literal
-    : INTEIRO
-    | FLOAT
-    | STRING
+    : INTEIRO { $$ = $1; $$.type = TY_INTEIRO }
+    | FLOAT { $$ = $1; $$.type = TY_FLOAT }
+    | STRING { $$ = $1; $$.type = TY_STRING }
 
 opAritmetica
     : SUB expr %prec NOT  { uniop("-", &$$, &$2); }
@@ -547,9 +594,11 @@ void _mkdir(char *path) {
 #endif
 
 int main(int argc, char *argv[]) {
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
     SetConsoleOutputCP(65001);
 #endif
+
     yydebug = 0;
 
     FILE *input = NULL;
