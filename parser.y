@@ -59,7 +59,7 @@ void uniop(const char* op, Expr *out, Expr *r) {
         // }
         int var = nextVar();
         out->var = var;
-        char const *type = ctypes[r->type];
+        char const *type = ctypes[out->type];
         asprintf(&out->text, "%s x%d;\n{\n%s\nx%d=%sx%d;\n}",
             type, var, r->text, var, op, r->var
         );
@@ -70,16 +70,25 @@ void uniop(const char* op, Expr *out, Expr *r) {
 }
 
 void binop(const char* op, Expr *out, Expr *l, Expr *r) {
-    if (l->type != r->type) {
-        char *error;
-        asprintf(&error, "operação com tipos incompatíveis: esquerda é '%s', mas direita é '%s'",
-            type_names[l->type], type_names[r->type]
-        );
-        yyerror(NULL, error);
-        r->type = l->type;
-        /* exit(1); */
+    {
+        Type a = l->type;
+        Type b = r->type;
+        if (a == TY_INTEIRO && b == TY_INTEIRO) {
+            out->type = TY_INTEIRO;
+        } else if (a == TY_INTEIRO && b == TY_FLOAT || a == TY_FLOAT && b == TY_INTEIRO || a == TY_FLOAT && b == TY_INTEIRO) {
+            out->type = TY_FLOAT;
+        } else if (a == TY_STRING || b == TY_STRING) {
+            yyerror(NULL, "operação com tipo 'string' não é valido");
+            out->type = TY_STRING;
+        } else {
+            char *error;
+            asprintf(&error, "operação com tipos incompatíveis: esquerda é '%s', mas direita é '%s'",
+                type_names[a], type_names[b]
+            );
+            yyerror(NULL, error);
+            out->type = a;
+        }
     }
-    out->type = r->type;
 
     if (l->var > 0 && r->var > 0) {
         // <type> x<var>; 
@@ -91,7 +100,7 @@ void binop(const char* op, Expr *out, Expr *l, Expr *r) {
         int var = nextVar();
         out->var = var;
 
-        char const *type = ctypes[l->type];
+        char const *type = ctypes[out->type];
         asprintf(&out->text, "%s x%d;\n{\n%s\n%s\nx%d=x%d%sx%d;\n}",
             type, var, l->text, r->text, var, l->var, op, r->var
         );
@@ -103,7 +112,7 @@ void binop(const char* op, Expr *out, Expr *l, Expr *r) {
         // }
         int var = nextVar();
         out->var = var;
-        char const *type = ctypes[l->type];
+        char const *type = ctypes[out->type];
         asprintf(&out->text, "%s x%d;\n{\n%s\nx%d=x%d%s%s;\n}",
             type, var, l->text, var, l->var, op, r->text
         );
@@ -115,7 +124,7 @@ void binop(const char* op, Expr *out, Expr *l, Expr *r) {
         // }
         int var = nextVar();
         out->var = var;
-        char const *type = ctypes[l->type];
+        char const *type = ctypes[out->type];
         asprintf(&out->text, "%s x%d;\n{\n%s\nx%d=%s%sx%d;\n}",
             type, var, r->text, var, l->text, op, r->var
         );
@@ -174,8 +183,8 @@ void atribuicao(const char* op, Expr *out, Expr *id, Expr *r) {
     int v = r->var;
     int var = nextVar();
     out->var = var;
-    char const *type = ctypes[r->type];
     out->type = r->type;
+    char const *type = ctypes[out->type];
     if (v > 0) {
         // <r>
         // <id> <op> x<r.var>;
@@ -200,8 +209,8 @@ void declaracao(Expr *out, Expr *id, Expr *r) {
     Expr atr = { 0, 0 };
     atribuicao("=", &atr, id, r);
 
-    char const *type = ctypes[r->type];
     out->type = r->type;
+    char const *type = ctypes[out->type];
     asprintf(&out->text, "%s %s;\n%s\n",
         type, id->text, atr.text
     );
@@ -239,8 +248,8 @@ void continua(Context *ctx, Expr *out, Expr *nome_bloco) {
 void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
     out->var = nextVar();
 
-    char const *type = ctypes[expr->type];
     out->type = expr->type;
+    char const *type = ctypes[out->type];
     if (nome_bloco->text == NULL) {
         asprintf(&out->text, "%s x%d = 0; return 0;\n", type, out->var);
         return;
@@ -263,8 +272,9 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
     char* label = nome->text ? nome->text : "";
     char* comands = comandos->text ? comandos->text : "";
     char* expression = expr->text ? expr->text : "0";
-    char const *type = expr->text ? ctypes[expr->type] : ctypes[0];
-    out->type = expr->type;
+
+    out->type = expr->text ? expr->type : TY_INTEIRO;
+    char const *type =  ctypes[out->type];
 
     int bloco = nome->text ? add_bloco(ctx, nome->text) : -1;
 
@@ -297,16 +307,22 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
 
 void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
 
-    if (then->type != otherwise->type) {
-        char *error;
-        asprintf(&error, "condição retorna tipos inconpatíveis: esquerda é '%s', mas direita é '%s'",
-            type_names[then->type], type_names[otherwise->type]
-        );
-        yyerror(NULL, error);
-        otherwise->type = then->type;
+    {
+        Type a = then->type;
+        Type b = otherwise->type;
+        if (a == b) {
+            out->type = a;
+        } else if (a == TY_INTEIRO && b == TY_FLOAT || a == TY_FLOAT && b == TY_INTEIRO || a == TY_FLOAT && b == TY_INTEIRO) {
+            out->type = TY_FLOAT;
+        } else {
+            char *error;
+            asprintf(&error, "operação com tipos incompatíveis: esquerda é '%s', mas direita é '%s'",
+                type_names[a], type_names[b]
+            );
+            yyerror(NULL, error);
+            out->type = a;
+        }
     }
-    out->type = then->type;
-
 
     unsigned int var = nextVar();
     out->var = var;
@@ -325,7 +341,7 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
         atr_else.text = "";
     }
 
-    char const *type = ctypes[then->type];
+    char const *type = ctypes[out->type];
     int v = cond->var;
     if (v > 0) {
         // <type> x<var>;
@@ -572,7 +588,7 @@ const char* token_name(int t) {
 }
 
 void yyerror(Context *ctx, const char *s) {
-    fprintf(stderr,"Error | Line: %d\n%s\n",yylineno,s);
+    fprintf(stderr,"Erro na linha %d: %s\n",yylineno,s);
 }
 
 #include <sys/stat.h>
