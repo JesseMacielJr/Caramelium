@@ -11,9 +11,9 @@
 Expr yylval;
 
 // The C type of each Caramellium type.
-char const *ctypes[] = {"int64_t", "double", "const char *"};
+char const *ctypes[] = {"int64_t", "double", "const char *", "char"};
 
-char const *type_names[] = {"inteiro", "float", "string"};
+char const *type_names[] = {"inteiro", "float", "string", "void"};
 
 struct Context {
     FILE *output;
@@ -240,14 +240,14 @@ int add_bloco(Context *ctx, char *nome_bloco) {
 void continua(Context *ctx, Expr *out, Expr *nome_bloco) {
     out->var = nextVar();
     int bloco = add_bloco(ctx, nome_bloco->text);
-    char const *type = ctypes[TY_INTEIRO];
-    out->type = TY_INTEIRO;
+    out->type = TY_VOID;
+    char const *type = ctypes[out->type];
     asprintf(&out->text, "%s x%d = 0; goto S%d;\n", type, out->var, bloco);
 }
 
 void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
     out->var = nextVar();
-    out->type = TY_INTEIRO;
+    out->type = TY_VOID;
     char const *type = ctypes[out->type];
     if (nome_bloco == NULL) {
         asprintf(&out->text, "%s x%d = 0; return 0;\n", type, out->var);
@@ -272,7 +272,7 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
     char* comands = comandos ? comandos->text : "";
     char* expression = expr ? expr->text : "0";
 
-    out->type = expr ? expr->type : TY_INTEIRO;
+    out->type = expr ? expr->type : TY_VOID;
     char const *type =  ctypes[out->type];
 
     int bloco = nome ? add_bloco(ctx, nome->text) : -1;
@@ -308,7 +308,7 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
 
     {
         Type a = then->type;
-        Type b = otherwise ? otherwise->type : TY_INTEIRO;
+        Type b = otherwise ? otherwise->type : TY_VOID;
         if (a == b) {
             out->type = a;
         } else if (a == TY_INTEIRO && b == TY_FLOAT || a == TY_FLOAT && b == TY_INTEIRO || a == TY_FLOAT && b == TY_INTEIRO) {

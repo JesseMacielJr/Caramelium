@@ -4,6 +4,7 @@ enum Type {
     TY_INTEIRO,
     TY_FLOAT,
     TY_STRING,
+    TY_VOID,
 };
 typedef enum Type Type;
 
