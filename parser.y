@@ -11,9 +11,9 @@
 Expr yylval;
 
 // The C type of each Caramellium type.
-char const *ctypes[] = {"int64_t", "double", "const char *", "char"};
+char const *ctypes[] = {"int64_t", "double", "const char *", "char", "char"};
 
-char const *type_names[] = {"inteiro", "float", "string", "void"};
+char const *type_names[] = {"inteiro", "float", "string", "void", "diverge"};
 
 struct Context {
     FILE *output;
@@ -45,8 +45,12 @@ char* concat(char* stra, char* strb) {
     return buffer;
 }
 
-void comando(Expr *out, Expr *tail, Expr *comando) {
-    asprintf(&out->text, "%s%s;\n", tail ? tail->text : "", comando->text);
+void comando(Expr *out, Expr *tail, Expr *comand) {
+    out->type = TY_VOID;
+    if (comand->type == TY_DIVERGE || tail && tail->type == TY_DIVERGE) {
+        out->type = TY_DIVERGE;
+    }
+    asprintf(&out->text, "%s%s;\n", tail ? tail->text : "", comand->text);
 }
 
 void uniop(const char* op, Expr *out, Expr *r) {
@@ -80,6 +84,10 @@ void binop(const char* op, Expr *out, Expr *l, Expr *r) {
         } else if (a == TY_STRING || b == TY_STRING) {
             yyerror(NULL, "operação com tipo 'string' não é valido");
             out->type = TY_STRING;
+        } else if (a == TY_DIVERGE) {
+            out->type = b;
+        } else if (b == TY_DIVERGE) {
+            out->type = a;
         } else {
             char *error;
             asprintf(&error, "operação com tipos incompatíveis: esquerda é '%s', mas direita é '%s'",
@@ -240,14 +248,14 @@ int add_bloco(Context *ctx, char *nome_bloco) {
 void continua(Context *ctx, Expr *out, Expr *nome_bloco) {
     out->var = nextVar();
     int bloco = add_bloco(ctx, nome_bloco->text);
-    out->type = TY_VOID;
+    out->type = TY_DIVERGE;
     char const *type = ctypes[out->type];
     asprintf(&out->text, "%s x%d = 0; goto S%d;\n", type, out->var, bloco);
 }
 
 void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
     out->var = nextVar();
-    out->type = TY_VOID;
+    out->type = TY_DIVERGE;
     char const *type = ctypes[out->type];
     if (nome_bloco == NULL) {
         asprintf(&out->text, "%s x%d = 0; return 0;\n", type, out->var);
@@ -273,6 +281,10 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
     char* expression = expr ? expr->text : "0";
 
     out->type = expr ? expr->type : TY_VOID;
+    if (comandos && comandos->type == TY_DIVERGE) {
+        out->type = TY_DIVERGE;
+    }
+
     char const *type =  ctypes[out->type];
 
     int bloco = nome ? add_bloco(ctx, nome->text) : -1;
@@ -313,6 +325,10 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
             out->type = a;
         } else if (a == TY_INTEIRO && b == TY_FLOAT || a == TY_FLOAT && b == TY_INTEIRO || a == TY_FLOAT && b == TY_INTEIRO) {
             out->type = TY_FLOAT;
+        } else if (a == TY_DIVERGE) {
+            out->type = b;
+        } else if (b == TY_DIVERGE) {
+            out->type = a;
         } else {
             char *error;
             asprintf(&error, "operação com tipos incompatíveis: esquerda é '%s', mas direita é '%s'",
@@ -487,8 +503,9 @@ expr: literal
     | opAtribuicao
     | condicao
     | bloco
-    | return
-    | continue
+    | return 
+    | continue 
+
 
 literal
     : INTEIRO { $$ = $1; $$.type = TY_INTEIRO }

@@ -5,6 +5,7 @@ enum Type {
     TY_FLOAT,
     TY_STRING,
     TY_VOID,
+    TY_DIVERGE,
 };
 typedef enum Type Type;
 
