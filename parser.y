@@ -46,7 +46,7 @@ char* concat(char* stra, char* strb) {
 }
 
 void comando(Expr *out, Expr *tail, Expr *comando) {
-    asprintf(&out->text, "%s%s;\n", tail->text ? tail->text : "", comando->text);
+    asprintf(&out->text, "%s%s;\n", tail ? tail->text : "", comando->text);
 }
 
 void uniop(const char* op, Expr *out, Expr *r) {
@@ -170,7 +170,7 @@ void chamada_funcao(Expr *out, Expr *nome, Expr *parametros) {
 }
 
 void parametro(Expr *out, Expr *tail, Expr *param) {
-    if (tail->text) {
+    if (tail) {
         out->tail = (Expr*) malloc(sizeof(Expr));
         *out->tail = *tail;
     }
@@ -247,10 +247,9 @@ void continua(Context *ctx, Expr *out, Expr *nome_bloco) {
 
 void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
     out->var = nextVar();
-
-    out->type = expr->type;
+    out->type = TY_INTEIRO;
     char const *type = ctypes[out->type];
-    if (nome_bloco->text == NULL) {
+    if (nome_bloco == NULL) {
         asprintf(&out->text, "%s x%d = 0; return 0;\n", type, out->var);
         return;
     }
@@ -269,14 +268,14 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
     
     unsigned int var = nextVar();
     out->var = var;
-    char* label = nome->text ? nome->text : "";
-    char* comands = comandos->text ? comandos->text : "";
-    char* expression = expr->text ? expr->text : "0";
+    char* label = nome ? nome->text : "";
+    char* comands = comandos ? comandos->text : "";
+    char* expression = expr ? expr->text : "0";
 
-    out->type = expr->text ? expr->type : TY_INTEIRO;
+    out->type = expr ? expr->type : TY_INTEIRO;
     char const *type =  ctypes[out->type];
 
-    int bloco = nome->text ? add_bloco(ctx, nome->text) : -1;
+    int bloco = nome ? add_bloco(ctx, nome->text) : -1;
 
     char* bloco_start = ""; 
     char* bloco_end   = "";
@@ -285,7 +284,7 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
         asprintf(&bloco_end, "E%d:", bloco);
     }
 
-    if (expr->text != NULL) {
+    if (expr != NULL) {
         Expr atr = { 0, 0 };
         Expr xvar = { 0, var };
         asprintf(&xvar.text, "x%d", var);
@@ -309,7 +308,7 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
 
     {
         Type a = then->type;
-        Type b = otherwise->type;
+        Type b = otherwise ? otherwise->type : TY_INTEIRO;
         if (a == b) {
             out->type = a;
         } else if (a == TY_INTEIRO && b == TY_FLOAT || a == TY_FLOAT && b == TY_INTEIRO || a == TY_FLOAT && b == TY_INTEIRO) {
@@ -335,7 +334,7 @@ void condicao(Expr *out, Expr *cond, Expr *then, Expr *otherwise) {
     atribuicao("=", &atr_then, &xvar, then);
 
     Expr atr_else = { 0, 0 };
-    if (otherwise->text != NULL) {
+    if (otherwise != NULL) {
         atribuicao("=", &atr_else, &xvar, otherwise);
     } else {
         atr_else.text = "";
@@ -409,11 +408,9 @@ void programa(Context *ctx, Expr *prog) {
     ;
 
     fprintf(ctx->output, "%sint main() {\n%sreturn 0;\n}\n", 
-        prelude, prog->text ? prog->text : ""
+        prelude, prog ? prog->text : ""
     ); 
 }
-
-Expr NONE = { NULL, 0 };
 
 %}
 
@@ -471,11 +468,11 @@ Expr NONE = { NULL, 0 };
 %%
 
 programa
-    :          { programa(ctx, &NONE); }
+    :          { programa(ctx, NULL); }
     | comandos { programa(ctx, &$1); }
 
 comandos
-    : expr PONTOEVIRGULA          { comando(&$$, &NONE, &$1); }
+    : expr PONTOEVIRGULA          { comando(&$$, NULL, &$1); }
     | comandos expr PONTOEVIRGULA { comando(&$$, &$1, &$2); }
 
 expr: literal
@@ -527,7 +524,7 @@ chamadaFuncao
 
 exprsVirgula
     :                           { $$.text = ""; }
-    | expr                      { parametro(&$$, &NONE, &$1); }
+    | expr                      { parametro(&$$, NULL, &$1); }
     | exprsVirgula VIRGULA expr { parametro(&$$, &$1, &$3); }
 
 declaracao
@@ -542,33 +539,33 @@ opAtribuicao
     | IDENTIFICADOR MOD_ATRIBUICAO expr  { atribuicao("%=", &$$, &$1, &$3); }
 
 condicao
-    : expr INTERROGACAO expr { condicao(&$$, &$1, &$3, &NONE); }
+    : expr INTERROGACAO expr { condicao(&$$, &$1, &$3, NULL); }
     | expr INTERROGACAO expr DOIS_PONTOS expr { condicao(&$$, &$1, &$3, &$5); }
 
 bloco
     : INICIO_BLOCO FIM_BLOCO
-    { bloco(ctx, &$$, &NONE, &NONE, &NONE); }
+    { bloco(ctx, &$$, NULL, NULL, NULL); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO FIM_BLOCO
-    { bloco(ctx, &$$, &$1, &NONE, &NONE); }
+    { bloco(ctx, &$$, &$1, NULL, NULL); }
     | INICIO_BLOCO expr FIM_BLOCO
-    { bloco(ctx, &$$, &NONE, &NONE, &$2); }
+    { bloco(ctx, &$$, NULL, NULL, &$2); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO expr FIM_BLOCO
-    { bloco(ctx, &$$, &$1, &NONE, &$4); }
+    { bloco(ctx, &$$, &$1, NULL, &$4); }
 
     | INICIO_BLOCO comandos FIM_BLOCO
-    { bloco(ctx, &$$, &NONE, &$2, &NONE); }
+    { bloco(ctx, &$$, NULL, &$2, NULL); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos FIM_BLOCO
-    { bloco(ctx, &$$, &$1, &$4, &NONE); }
+    { bloco(ctx, &$$, &$1, &$4, NULL); }
     | INICIO_BLOCO comandos expr FIM_BLOCO
-    { bloco(ctx, &$$, &NONE, &$2, &$3); }
+    { bloco(ctx, &$$, NULL, &$2, &$3); }
     | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos expr FIM_BLOCO
     { bloco(ctx, &$$, &$1, &$4, &$5); }
 
 return
-    : RETURN                 { retorna(ctx, &$$, &NONE, &NONE); }
-    | RETURN expr            { retorna(ctx, &$$, &NONE, &$2);}
-    | RETURN NOME_BLOCO      { retorna(ctx, &$$, &$2, &NONE); }
-    | RETURN NOME_BLOCO expr { retorna(ctx, &$$, &$2, &$3);}
+    : RETURN NOME_BLOCO      { retorna(ctx, &$$, &$2, NULL); }
+    /* | RETURN NOME_BLOCO expr { retorna(ctx, &$$, &$2, &$3);} */
+    /* | RETURN                 { retorna(ctx, &$$, NULL, NULL); } */
+    /* | RETURN expr            { retorna(ctx, &$$, NULL, &$2);} */
 
 continue
     : CONTINUE NOME_BLOCO { continua(ctx, &$$, &$2); }
