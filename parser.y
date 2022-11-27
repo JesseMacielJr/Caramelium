@@ -11,7 +11,7 @@
 Expr yylval;
 
 // The C type of each Caramellium type.
-char const *ctypes[] = {"int64_t", "double", "char const *"};
+char const *ctypes[] = {"int64_t", "double", "const char *"};
 
 char const *type_names[] = {"inteiro", "float", "string"};
 
@@ -375,7 +375,7 @@ void programa(Context *ctx, Expr *prog) {
     "#include <stdio.h>\n"
     "\n"
     "\n"
-    "void _escrever(char *string, ...) {\n"
+    "void _escrever(const char *string, ...) {\n"
     "  va_list args;\n"
     "  va_start(args, string);\n"
     "\n"
@@ -385,7 +385,7 @@ void programa(Context *ctx, Expr *prog) {
     "\n"
     "  va_end(args);\n"
     "}\n"
-    "void _escreverln(char *string, ...) {\n"
+    "void _escreverln(const char *string, ...) {\n"
     "  va_list args;\n"
     "  va_start(args, string);\n"
     "\n"
