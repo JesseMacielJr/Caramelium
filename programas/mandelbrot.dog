@@ -1,4 +1,4 @@
-// A linguagem não possui suporte para ponto flutuando, então todos os cálculos
+// A linguagem não possui suporte para ponto flutuante, então todos os cálculos
 // serão feitos com números inteiros com esse valor de escala.
 is := 65536;
 y := 0;

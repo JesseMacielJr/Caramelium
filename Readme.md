@@ -14,10 +14,18 @@ Execute os comandos a seguir:
 
 ```
 bison -d parser.y --debug
-flex lexer.l 
+flex lexer.l
 gcc parser.tab.c -o compilador
 
+CMD:
 compilador programas/fibonacci.dog --run
+
+PowerShell:
+.\compilador programas/fibonacci.dog --run
+
+Linux:
+./compilador programas/fibonacci.dog --run
+
 ```
 
 Ou use o arquivo `executa.bat`:

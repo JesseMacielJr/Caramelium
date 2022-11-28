@@ -1,0 +1,20 @@
+//fatorial
+fat := 1;
+
+num := $entrada: {
+    num := ler("digite um número:");
+    num < 0 ? {
+        escreverln("o número deve ser positivo");
+        -> $entrada;
+    };
+    num
+};
+
+num > 0 ? $laço: {
+    num == 1 ? <- $laço;
+    fat *= num;
+    num -= 1;
+    -> $laço;
+};
+
+escreverln("%lld", fat);
