@@ -245,28 +245,77 @@ int add_bloco(Context *ctx, char *nome_bloco) {
     return ctx->blocos_len - 1;
 }
 
+int remove_bloco(Context *ctx, int bloco) {
+    ctx->blocos[bloco] = "";
+}
+
 void continua(Context *ctx, Expr *out, Expr *nome_bloco) {
-    out->var = nextVar();
-    int bloco = add_bloco(ctx, nome_bloco->text);
     out->type = TY_DIVERGE;
+    int bloco = get_bloco(ctx, nome_bloco->text);
+
+    if (bloco == -1) {
+        char *error;
+        asprintf(&error, "bloco '%s' não está definido nesse escopo",
+            nome_bloco->text
+        );
+        yyerror(NULL, error);
+
+        out->var = 0;
+        out->text = "0";
+        return;
+    }
+
     char const *type = ctypes[out->type];
+    out->var = nextVar();
     asprintf(&out->text, "%s x%d = 0; goto S%d;\n", type, out->var, bloco);
 }
 
 void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
-    out->var = nextVar();
     out->type = TY_DIVERGE;
     char const *type = ctypes[out->type];
+
     if (nome_bloco == NULL) {
         asprintf(&out->text, "%s x%d = 0; return 0;\n", type, out->var);
         return;
     }
 
-    int bloco = add_bloco(ctx, nome_bloco->text);
+    int bloco = get_bloco(ctx, nome_bloco->text);
+    if (bloco == -1) {
+        char *error;
+        asprintf(&error, "bloco '%s' não está definido nesse escopo",
+            nome_bloco->text
+        );
+        yyerror(NULL, error);
+
+        out->var = 0;
+        out->text = "0";
+        return;
+    }
+
+    out->var = nextVar();
+
     asprintf(&out->text, "%s x%d = 0; goto E%d;\n", type, out->var, bloco);
 }
 
-void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
+void bloco_labels(Context *ctx, Expr* out, Expr* nome, Expr* corpo) {
+    
+    *out = *corpo;
+
+    int bloco = get_bloco(ctx, nome->text);
+    if (bloco == -1) {
+        fprintf(stderr, "bloco não encontrado??");
+        exit(-1);
+    }
+    asprintf(
+        &out->text,
+        "S%d:; %s\nE%d:;",
+        bloco, corpo->text, bloco
+    );
+
+    remove_bloco(ctx, bloco);
+}
+
+void bloco(Context *ctx, Expr *out, Expr *comandos, Expr *expr) {
     // <type> x<var>;
     // S<bloco>: {
     // <comands>
@@ -276,7 +325,7 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
     
     unsigned int var = nextVar();
     out->var = var;
-    char* label = nome ? nome->text : "";
+
     char* comands = comandos ? comandos->text : "";
     char* expression = expr ? expr->text : "0";
 
@@ -287,15 +336,6 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
 
     char const *type =  ctypes[out->type];
 
-    int bloco = nome ? add_bloco(ctx, nome->text) : -1;
-
-    char* bloco_start = ""; 
-    char* bloco_end   = "";
-    if (bloco != -1) {
-        asprintf(&bloco_start, "S%d:", bloco);
-        asprintf(&bloco_end, "E%d:", bloco);
-    }
-
     if (expr != NULL) {
         Expr atr = { 0, 0 };
         Expr xvar = { 0, var };
@@ -304,14 +344,14 @@ void bloco(Context *ctx, Expr *out, Expr *nome, Expr *comandos, Expr *expr) {
 
         asprintf(
             &out->text,
-            "%s x%d;\n%s{\n%s%s;\n}%s",
-            type, var, bloco_start, comands, atr.text, bloco_end
+            "%s x%d;\n{\n%s%s\n}",
+            type, var, comands, atr.text
         );
     } else {
         asprintf(
             &out->text,
-            "%s x%d;\n%s{\n%sx%d=0;\n}%s",
-            type, var, bloco_start, comands, var, bloco_end
+            "%s x%d;\n{\n%s x%d=0;\n}",
+            type, var, comands, var
         );
     }
 }
@@ -560,23 +600,18 @@ condicao
     | expr INTERROGACAO expr DOIS_PONTOS expr { condicao(&$$, &$1, &$3, &$5); }
 
 bloco
-    : INICIO_BLOCO FIM_BLOCO
-    { bloco(ctx, &$$, NULL, NULL, NULL); }
-    | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO FIM_BLOCO
-    { bloco(ctx, &$$, &$1, NULL, NULL); }
-    | INICIO_BLOCO expr FIM_BLOCO
-    { bloco(ctx, &$$, NULL, NULL, &$2); }
-    | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO expr FIM_BLOCO
-    { bloco(ctx, &$$, &$1, NULL, &$4); }
+    : NOME_BLOCO { add_bloco(ctx, $1.text); } DOIS_PONTOS blocoCorpo { bloco_labels(ctx, &$$, &$1, &$4); }
+    | blocoCorpo
 
+blocoCorpo
+    : INICIO_BLOCO FIM_BLOCO
+    { bloco(ctx, &$$, NULL, NULL); }
+    | INICIO_BLOCO expr FIM_BLOCO
+    { bloco(ctx, &$$, NULL, &$2); }
     | INICIO_BLOCO comandos FIM_BLOCO
-    { bloco(ctx, &$$, NULL, &$2, NULL); }
-    | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos FIM_BLOCO
-    { bloco(ctx, &$$, &$1, &$4, NULL); }
+    { bloco(ctx, &$$, &$2, NULL); }
     | INICIO_BLOCO comandos expr FIM_BLOCO
-    { bloco(ctx, &$$, NULL, &$2, &$3); }
-    | NOME_BLOCO DOIS_PONTOS INICIO_BLOCO comandos expr FIM_BLOCO
-    { bloco(ctx, &$$, &$1, &$4, &$5); }
+    { bloco(ctx, &$$, &$2, &$3); }
 
 return
     : RETURN NOME_BLOCO      { retorna(ctx, &$$, &$2, NULL); }
