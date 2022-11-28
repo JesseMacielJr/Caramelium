@@ -633,12 +633,26 @@ int main(int argc, char *argv[]) {
 
     FILE *input = NULL;
     FILE *output = stdout;
-    bool build_and_run = false;
+    bool build = false;
+    bool run = false;
     bool print_tokens = false;
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             if (strcmp(argv[i], "--tokens") == 0) {
                 print_tokens = true;
+            } else if (strcmp(argv[i], "--debug") == 0) {
+                yydebug = 1;
+            } else if (strcmp(argv[i], "--build") == 0) {
+                struct stat st = {0};
+                if (stat("build", &st) == -1) {
+                    _mkdir("build");
+                }
+                output = fopen("build/out.c", "w");
+                if (output == NULL) {
+                    fprintf(stderr, "Arquivo de saída não encontrado\n");
+                    return 5;
+                }
+                build = true;
             } else if (strcmp(argv[i], "--run") == 0) {
                 struct stat st = {0};
                 if (stat("build", &st) == -1) {
@@ -649,7 +663,8 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Arquivo de saída não encontrado\n");
                     return 5;
                 }
-                build_and_run = true;
+                build = true;
+                run = true;
             } else if (strcmp(argv[i], "-o") == 0) {
                 i++;
                 if (output != stdout) {
@@ -702,17 +717,24 @@ int main(int argc, char *argv[]) {
     fclose(yyin);
     fclose(output);
 
-    if (build_and_run) {
-        if (windows) {
-            int res = system("gcc build\\out.c -o build\\out.exe");
-            if (res != 0) {
-                fprintf(stderr, "Compilação falhou.");
-                return 7;
-            }
-            system(".\\build\\out.exe");
-        } else {
-            system("gcc build/out.c -o build/out.exe");
-            system("./build/out.exe");
+    const char *build_command;
+    const char *run_command;
+    if (windows) {
+        build_command = "gcc build\\out.c -o build\\out.exe";
+        run_command = ".\\build\\out.exe";
+    } else {
+        build_command = "gcc build/out.c -o build/out.exe";
+        run_command ="./build/out.exe";
+    }
+
+    if (build) {
+        int res = system(build_command);
+        if (res != 0) {
+            fprintf(stderr, "Compilação falhou.");
+            return 7;
+        }
+        if (run) {
+            system(run_command);
         }
     }
 }
