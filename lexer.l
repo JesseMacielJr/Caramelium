@@ -9,9 +9,10 @@ int yylex();
 extern Expr yylval;
 #include "parser.tab.h"
 
+
+// todos os identificadores são préfixados com '_' para evitar conflito com
+// variaveis durante a compilação.
 int identificador(int token) {
-    // todos os identificadores são préfixados com '_' para evitar conflito com
-    // variaveis criadas na compilação.
     size_t len = strlen(yytext) + 1;
     void *buffer = malloc (len + 1);
     memcpy (buffer+1, yytext, len);
@@ -27,6 +28,7 @@ int literal(int token) {
     yylval.var = 0;
     return token;
 }
+
 %}
 
 %option yylineno
@@ -40,12 +42,9 @@ int literal(int token) {
 ":"   { return DOIS_PONTOS; }
 ","   { return VIRGULA; }
 
-[0-9]+ { 
-  return literal(INTEIRO);
-}
-[0-9]+("."[0-9]*)([eE]"-"?[0-9]*)? { 
-  return literal(FLOAT);
-}
+[0-9]+ { return literal(INTEIRO); }
+[0-9]+("."[0-9]*)([eE]"-"?[0-9]*)? { return literal(FLOAT); }
+
 [a-zA-Z][a-zA-z0-9]* { return identificador(IDENTIFICADOR); }
 
 \"(\\.|[^"\\])*\" { return literal(STRING); }
@@ -79,7 +78,7 @@ int literal(int token) {
 ")"   { return FECHA_PARENTESES; }
 [ \f\n\r\t\v]
 "//".*
-.       {return *yytext;}
+.       { return *yytext; }
 	
 %%	
 

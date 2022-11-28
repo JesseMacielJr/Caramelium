@@ -10,13 +10,19 @@
 
 Expr yylval;
 
-// The C type of each Caramellium type.
+/// O nome de cada tipo, quando traduzidos para C. 
 char const *ctypes[] = {"int64_t", "double", "const char *", "char", "char"};
 
+/// O nome de cada tipo, quando exibidas em mensagens de erro.
 char const *type_names[] = {"inteiro", "float", "string", "void", "diverge"};
 
+/// O tipo que contem as informações compartilhadas durante a compilação.
 struct Context {
+    /// O arquivo de saída, ao qual o programa compilado em C será escrito.
     FILE *output;
+
+    /// Lista de blocos atualmente declarados. Um nome é adiconado sempre que
+    /// entra em um bloco nomeado, e é removido assim que ele termina.
     int blocos_len;
     char *blocos[16];
 };
@@ -30,12 +36,14 @@ int yylex();
 int yyparse(Context *ctx);
 void yyerror(Context *ctx, const char *s);
 
+/// Retona o próximo número de variável disponível.
 unsigned int nextVar() {
     static unsigned int var_counter = 0;
     var_counter += 1;
     return var_counter;
 }
 
+/// Faz a concatação de duas strings.
 char* concat(char* stra, char* strb) {
     size_t lena = strlen(stra);
     size_t lenb = strlen(strb);
@@ -298,7 +306,9 @@ void retorna(Context *ctx, Expr *out, Expr *nome_bloco, Expr *expr) {
 }
 
 void bloco_labels(Context *ctx, Expr* out, Expr* nome, Expr* corpo) {
-    
+    // S<bloco>:;
+    // <corpo>
+    // E<bloco>:;
     *out = *corpo;
 
     int bloco = get_bloco(ctx, nome->text);
@@ -317,11 +327,10 @@ void bloco_labels(Context *ctx, Expr* out, Expr* nome, Expr* corpo) {
 
 void bloco(Context *ctx, Expr *out, Expr *comandos, Expr *expr) {
     // <type> x<var>;
-    // S<bloco>: {
+    // {
     // <comands>
     // <atr(x<var>, <expr>)>
-    // break;
-    // } E<bloco>:
+    // }
     
     unsigned int var = nextVar();
     out->var = var;
@@ -517,7 +526,7 @@ void programa(Context *ctx, Expr *prog) {
 %left IGUAL NOT_IGUAL MENOR MAIOR MENOR_IGUAL MAIOR_IGUAL
 %left SOMA SUB
 %left MULT DIV MOD
-%left NOT // also unary MINUS
+%left NOT // também o SUB unário.
 
 %parse-param {Context *ctx}
 
