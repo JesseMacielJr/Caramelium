@@ -557,9 +557,9 @@ expr: literal
 
 
 literal
-    : INTEIRO { $$ = $1; $$.type = TY_INTEIRO }
-    | FLOAT { $$ = $1; $$.type = TY_FLOAT }
-    | STRING { $$ = $1; $$.type = TY_STRING }
+    : INTEIRO { $$ = $1; $$.type = TY_INTEIRO; }
+    | FLOAT { $$ = $1; $$.type = TY_FLOAT; }
+    | STRING { $$ = $1; $$.type = TY_STRING; }
 
 opAritmetica
     : SUB expr %prec NOT  { uniop("-", &$$, &$2); }
