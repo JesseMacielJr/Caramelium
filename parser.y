@@ -764,10 +764,10 @@ int main(int argc, char *argv[]) {
     const char *build_command;
     const char *run_command;
     if (windows) {
-        build_command = "gcc build\\out.c -o build\\out.exe";
+        build_command = "gcc -w build\\out.c -o build\\out.exe";
         run_command = ".\\build\\out.exe";
     } else {
-        build_command = "gcc build/out.c -o build/out.exe";
+        build_command = "gcc -w build/out.c -o build/out.exe";
         run_command ="./build/out.exe";
     }
 
