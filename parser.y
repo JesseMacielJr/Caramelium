@@ -462,11 +462,11 @@ void programa(Context *ctx, Expr *prog) {
     "  va_end(args);\n"
     "}\n"
     "\n"
-    "int _ler(char *string) {\n"
+    "int64_t _ler(char *string) {\n"
     "  char *text = (char *)string;\n"
     "  printf(\"%s \", text);\n"
     "\n"
-    "  int out;\n"
+    "  int64_t out;\n"
     "  scanf(\"%ld\", &out);\n"
     "  return out;\n"
     "}\n"
@@ -557,9 +557,9 @@ expr: literal
 
 
 literal
-    : INTEIRO { $$ = $1; $$.type = TY_INTEIRO }
-    | FLOAT { $$ = $1; $$.type = TY_FLOAT }
-    | STRING { $$ = $1; $$.type = TY_STRING }
+    : INTEIRO { $$ = $1; $$.type = TY_INTEIRO; }
+    | FLOAT { $$ = $1; $$.type = TY_FLOAT; }
+    | STRING { $$ = $1; $$.type = TY_STRING; }
 
 opAritmetica
     : SUB expr %prec NOT  { uniop("-", &$$, &$2); }
@@ -764,10 +764,10 @@ int main(int argc, char *argv[]) {
     const char *build_command;
     const char *run_command;
     if (windows) {
-        build_command = "gcc build\\out.c -o build\\out.exe";
+        build_command = "gcc -w build\\out.c -o build\\out.exe";
         run_command = ".\\build\\out.exe";
     } else {
-        build_command = "gcc build/out.c -o build/out.exe";
+        build_command = "gcc -w build/out.c -o build/out.exe";
         run_command ="./build/out.exe";
     }
 
