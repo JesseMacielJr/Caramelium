@@ -11,8 +11,8 @@ n := $entrada: {
 };
 
 $laço: {
-    n -= 1;
     n == 0 ? <- $laço;
+    n -= 1;
     escreverln("%lld", a);
     next := a + b;
     a = b;

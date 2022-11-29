@@ -1,7 +1,8 @@
 #pragma once
 
 /// Os tipos das expressões durante a compilacão.
-enum Type {
+enum Type
+{
     /// Um valor inteiro
     TY_INTEIRO,
     /// Um valor ponto flutuante
@@ -18,7 +19,8 @@ enum Type {
 typedef enum Type Type;
 
 /// O tipo que o Bison retorna em cada regra.
-struct Expr {
+struct Expr
+{
     /// String condendo a tradução dessa expressão para código em C.
     char *text;
 
